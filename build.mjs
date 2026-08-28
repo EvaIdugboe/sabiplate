@@ -5,11 +5,26 @@ import { gunzipSync } from 'node:zlib';
 const root = process.cwd();
 const dist = path.join(root, 'dist');
 const archivePath = path.join(root, 'source', 'site-source.tar.gz');
+const archiveUrl = process.env.SABIPLATE_SOURCE_URL || 'https://raw.githubusercontent.com/EvaIdugboe/sabiplate/main/source/site-source.tar.gz';
 
 await rm(dist, { recursive: true, force: true });
 await mkdir(dist, { recursive: true });
 
-const archive = gunzipSync(await readFile(archivePath));
+let compressed;
+try {
+  compressed = await readFile(archivePath);
+  console.log('Using SabiPlate source archive from repository.');
+} catch (error) {
+  if (error?.code !== 'ENOENT') throw error;
+  console.log('Local source archive not present; fetching it from GitHub.');
+  const response = await fetch(archiveUrl, { redirect: 'follow' });
+  if (!response.ok) {
+    throw new Error(`Could not fetch SabiPlate source archive: ${response.status} ${response.statusText}`);
+  }
+  compressed = Buffer.from(await response.arrayBuffer());
+}
+
+const archive = gunzipSync(compressed);
 let offset = 0;
 let extracted = 0;
 
