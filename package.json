@@ -4,7 +4,7 @@
   "private": true,
   "description": "SabiPlate static meal-planning app",
   "scripts": {
-    "build": "node build.mjs"
+    "build": "node build.mjs && node repair-images.mjs"
   },
   "dependencies": {
     "sharp": "0.34.3"
