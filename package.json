@@ -5,5 +5,8 @@
   "description": "SabiPlate static meal-planning app",
   "scripts": {
     "build": "node build.mjs"
+  },
+  "dependencies": {
+    "sharp": "0.34.3"
   }
 }
