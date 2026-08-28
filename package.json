@@ -1,0 +1,9 @@
+{
+  "name": "sabiplate-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SabiPlate static meal-planning app",
+  "scripts": {
+    "build": "node build.mjs"
+  }
+}
