@@ -2,7 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const dist = path.join(process.cwd(), 'dist');
-const version = '20260829-hero-hq1';
+const version = '20260829-hero-hq2';
 const imageIds = [
   'jollof-rice-with-grilled-chicken',
   'beans-plantain-lunch-bowl',
@@ -49,20 +49,19 @@ const svg = `<?xml version="1.0" encoding="UTF-8"?>
   <text x="600" y="1037" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="44" font-weight="700" fill="#154d35">SabiPlate</text>
   <text x="600" y="1090" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="25" font-style="italic" fill="#c76845">Know your food.</text>
   <text x="600" y="1124" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="25" font-style="italic" fill="#c76845">Own your goals.</text>
-  <rect x="28" y="1490" width="1144" height="82" rx="0 0 30 30" fill="#154d35"/>
+  <rect x="28" y="1490" width="1144" height="82" fill="#154d35"/>
   <text x="600" y="1543" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" letter-spacing="3" fill="#f8efe4">NIGERIAN + GLOBAL FOOD • SMARTER PLANNING</text>
 </svg>`;
 
-const heroPath = path.join(dist, 'assets', 'hero-cover-hq.svg');
-await writeFile(heroPath, svg);
+await writeFile(path.join(dist, 'assets', 'hero-cover-hq.svg'), svg);
 
 const indexPath = path.join(dist, 'index.html');
 let html = await readFile(indexPath, 'utf8');
-const oldExpr = "window.SABI_BRAND_IMAGE||'sabi:0b1c36caa959d25ef38e'";
-const newExpr = `'./assets/hero-cover-hq.svg?v=${version}'`;
-const count = html.split(oldExpr).length - 1;
-if (count !== 2) throw new Error(`Expected exactly 2 brand-image references, found ${count}`);
-html = html.split(oldExpr).join(newExpr);
+const oldAsset = './assets/sabiplate-brand-reference.jpg';
+const newAsset = `./assets/hero-cover-hq.svg?v=${version}`;
+const count = html.split(oldAsset).length - 1;
+if (count !== 2) throw new Error(`Expected exactly 2 stable brand-image references, found ${count}`);
+html = html.split(oldAsset).join(newAsset);
 html = html.replace('.hero-visual{min-height:430px;background:center/cover no-repeat;position:relative}', '.hero-visual{min-height:430px;background:center 24%/cover no-repeat;position:relative}');
 await writeFile(indexPath, html);
-console.log(`Hero-only preview ready: ${version}. Original cookbook concept preserved; no recipe image mapping changed.`);
+console.log(`Hero-only preview ready: ${version}. Original cookbook concept preserved; recipe image mapping unchanged.`);
