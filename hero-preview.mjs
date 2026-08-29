@@ -3,12 +3,12 @@ import path from 'node:path';
 import sharp from 'sharp';
 
 const dist = path.join(process.cwd(), 'dist');
-const version = '20260829-hero-hq3';
+const version = '20260829-hero-hq4-mixed';
 const imageIds = [
   'jollof-rice-with-grilled-chicken',
-  'beans-plantain-lunch-bowl',
+  'grilled-salmon-rice-bowl',
   'efo-riro-grilled-fish-small-swallow',
-  'nigerian-egg-fried-rice-prawns'
+  'chicken-shawarma-wrap'
 ];
 
 const tiles = [];
@@ -69,4 +69,4 @@ if (count !== 2) throw new Error(`Expected exactly 2 stable brand-image referenc
 html = html.split(oldAsset).join(newAsset);
 html = html.replace('.hero-visual{min-height:430px;background:center/cover no-repeat;position:relative}', '.hero-visual{min-height:430px;background:center 24%/cover no-repeat;position:relative}');
 await writeFile(indexPath, html);
-console.log(`Hero-only preview ready: ${version}. Original cookbook concept preserved; recipe image mapping unchanged.`);
+console.log(`Hero-only preview ready: ${version}. Uses two Nigerian and two global dishes; recipe image mapping unchanged.`);
