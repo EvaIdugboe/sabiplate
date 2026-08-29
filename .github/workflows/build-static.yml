@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -33,7 +33,19 @@ jobs:
           test -f dist/assets/sabiplate-hero.webp
           test -f dist/assets/photo-manifest.json
           test -f dist/assets/image-credits.html
-          node -e "const fs=require('fs'); const m=JSON.parse(fs.readFileSync('dist/assets/photo-manifest.json','utf8')); if(!/^20260829-hq\d+$/.test(m.version)) process.exit(1); const n=Object.keys(m.recipes||{}).length; if(n!==100) { console.error('Expected 100 recipe images, found',n); process.exit(1); } console.log('Verified image manifest',m.version,'with',n,'recipes');"
+          node -e "const fs=require('fs'); const m=JSON.parse(fs.readFileSync('dist/assets/photo-manifest.json','utf8')); if(!/^20260829-hq\d+$/.test(m.version)) process.exit(1); const n=Object.keys(m.recipes||{}).length; if(n!==100) { console.error('Expected 100 recipe images, found',n); process.exit(1); } console.log('Verified image manifest',m.version,'mode',m.mode,'with',n,'recipes');"
+
+      - name: Save permanent HQ image library
+        if: ${{ hashFiles('source/hq-images.tar.gz') == '' }}
+        run: |
+          mkdir -p source
+          tar --sort=name --mtime='UTC 2026-08-29' --owner=0 --group=0 --numeric-owner -cf - -C dist assets/recipes | gzip -n > source/hq-images.tar.gz
+          cp dist/assets/photo-manifest.json source/hq-images-manifest.json
+          git config user.name "SabiPlate Image Builder"
+          git config user.email "actions@users.noreply.github.com"
+          git add source/hq-images.tar.gz source/hq-images-manifest.json
+          git commit -m "Store permanent HQ recipe image library"
+          git push
 
       - name: Upload verified static site
         uses: actions/upload-artifact@v4
