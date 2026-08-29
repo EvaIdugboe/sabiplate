@@ -6,6 +6,7 @@ const root = process.cwd();
 const dist = path.join(root, 'dist');
 const archivePath = path.join(root, 'source', 'site-source.tar.gz');
 const archiveUrl = process.env.SABIPLATE_SOURCE_URL || 'https://raw.githubusercontent.com/EvaIdugboe/sabiplate/main/source/site-source.tar.gz';
+const productionSiteUrl = 'https://sabiplate.vercel.app/';
 
 await rm(dist, { recursive: true, force: true });
 await mkdir(dist, { recursive: true });
@@ -52,5 +53,20 @@ while (offset + 512 <= archive.length) {
 }
 
 if (!extracted) throw new Error('No SabiPlate files were extracted.');
+
+// Keep all Supabase email confirmation, password recovery and email-change callbacks
+// on the canonical production site. This prevents local/preview URLs from being
+// baked into emails when a tester happens to open a non-production copy.
+const authBundlePath = path.join(dist, 'assets', 'auth-sync.bundle.js');
+let authBundle = await readFile(authBundlePath, 'utf8');
+const dynamicCallback = 'function zt(){return`${window.location.origin}${window.location.pathname}`}';
+const canonicalCallback = `function zt(){return${JSON.stringify(productionSiteUrl)}}`;
+if (!authBundle.includes(dynamicCallback) && !authBundle.includes(canonicalCallback)) {
+  throw new Error('Could not locate the SabiPlate auth callback helper. Refusing to publish an unverified auth build.');
+}
+authBundle = authBundle.replace(dynamicCallback, canonicalCallback);
+await writeFile(authBundlePath, authBundle);
+console.log(`Supabase auth callbacks pinned to ${productionSiteUrl}`);
+
 console.log(`SabiPlate base build ready: ${extracted} files extracted.`);
 console.log('Base build does not upscale or remotely replace food photos. HQ image handling runs in the dedicated image stage.');
