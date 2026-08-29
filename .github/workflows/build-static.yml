@@ -33,12 +33,12 @@ jobs:
           test -f dist/assets/sabiplate-hero.webp
           test -f dist/assets/photo-manifest.json
           test -f dist/assets/image-credits.html
-          grep -q '20260829-hq8' dist/index.html
+          node -e "const fs=require('fs'); const m=JSON.parse(fs.readFileSync('dist/assets/photo-manifest.json','utf8')); if(!/^20260829-hq\d+$/.test(m.version)) process.exit(1); const n=Object.keys(m.recipes||{}).length; if(n!==100) { console.error('Expected 100 recipe images, found',n); process.exit(1); } console.log('Verified image manifest',m.version,'with',n,'recipes');"
 
       - name: Upload verified static site
         uses: actions/upload-artifact@v4
         with:
-          name: sabiplate-static-hq8
+          name: sabiplate-static-hq
           path: dist/
           if-no-files-found: error
           retention-days: 7
