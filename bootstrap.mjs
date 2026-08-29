@@ -1,6 +1,6 @@
 import { access, writeFile } from 'node:fs/promises';
 
-const files = ['build.mjs', 'repair-images.mjs'];
+const files = ['build.mjs', 'repair-images-v2.mjs'];
 for (const file of files) {
   try {
     await access(file);
@@ -14,4 +14,4 @@ for (const file of files) {
 }
 
 await import('./build.mjs');
-await import('./repair-images.mjs');
+await import('./repair-images-v2.mjs');
