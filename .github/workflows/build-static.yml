@@ -1,0 +1,44 @@
+name: Build verified SabiPlate static site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build and verify all food images
+        run: npm run build
+
+      - name: Verify static output
+        run: |
+          test -f dist/index.html
+          test -f dist/assets/sabiplate-hero.webp
+          test -f dist/assets/photo-manifest.json
+          test -f dist/assets/image-credits.html
+          grep -q '20260829-hq8' dist/index.html
+
+      - name: Upload verified static site
+        uses: actions/upload-artifact@v4
+        with:
+          name: sabiplate-static-hq8
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
