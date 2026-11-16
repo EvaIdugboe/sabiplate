@@ -55,8 +55,7 @@ const usable = (c) => c && /jpe?g/i.test(c.mime) && c.w >= 1000 && c.h >= 650 &&
 await mkdir('candidates', { recursive: true });
 const result = {};
 const rows = [];
-for (const [id, qs] of Object.entries(queries)) {
-  if (only && !only.has(id)) continue;
+async function doDish(id, qs) {
   const picked = [], seen = new Set();
   const add = (list) => { for (const c of list) { if (picked.length >= PER_DISH) break; if (!usable(c) || seen.has(c.full)) continue; seen.add(c.full); picked.push(c); } };
   try {
@@ -73,9 +72,14 @@ for (const [id, qs] of Object.entries(queries)) {
     await sleep(80);
   }
   result[id] = picked.map((c, i) => ({ n: i + 1, ...c }));
-  rows.push({ id, tiles });
+  rowById[id] = { id, tiles };
   console.log(id, picked.length, picked.map((c) => c.source[0]).join(''));
 }
+const rowById = {};
+const todo = Object.entries(queries).filter(([id]) => !only || only.has(id));
+let cursor = 0;
+await Promise.all([0, 1, 2].map(async () => { while (cursor < todo.length) { const [id, qs] = todo[cursor++]; try { await doDish(id, qs); } catch (e) { console.log('dish failed', id, String(e)); rowById[id] = { id, tiles: [] }; result[id] = result[id] || []; } } }));
+for (const [id] of todo) rows.push(rowById[id] || { id, tiles: [] });
 const perSheet = 10;
 for (let s = 0; s * perSheet < rows.length; s++) {
   const chunk = rows.slice(s * perSheet, (s + 1) * perSheet);
