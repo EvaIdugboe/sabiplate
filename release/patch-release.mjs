@@ -19,10 +19,10 @@ function replaceOnce(label, from, to) {
 // 1. Household engine replaces the fixed two-person code that follows the plan data.
 const engine = await readFile(path.join(root, 'release', 'engine.js'), 'utf8');
 const scriptStart = html.indexOf('<script id="sabiplate-v15-engine">');
-const codeStart = html.indexOf(';\nconst dbg=window.SABI_DEBUG;if(!dbg)return;', scriptStart);
+const codeStart = html.indexOf('const dbg=window.SABI_DEBUG;if(!dbg)return;', scriptStart);
 const scriptEnd = html.indexOf('</script>', scriptStart);
 if (scriptStart < 0 || codeStart < 0 || scriptEnd < 0) throw new Error('Could not locate the plan engine block.');
-html = html.slice(0, codeStart) + engine + html.slice(scriptEnd);
+html = html.slice(0, codeStart) + engine.trim().replace(/^;/, '') + html.slice(scriptEnd);
 
 // 2. Cover art. Tiles are used at native size, never enlarged.
 const tileIds = ['jollof-rice-with-grilled-chicken', 'grilled-salmon-rice-bowl', 'moi-moi-boiled-egg', 'chicken-shawarma-wrap'];
@@ -63,11 +63,11 @@ html = html.replace(/\.hero-visual\{min-height:430px;background:center(?: 24%)?\
 const cbStart = html.indexOf('function renderCookbook(){');
 const cbEnd = html.indexOf('</div></div></div>`}', cbStart);
 if (cbStart < 0 || cbEnd < 0) throw new Error('Could not locate renderCookbook.');
-const cookbook = "function renderCookbook(){const el=$('#view-cookbook');const cols=[['Power Breakfasts',r=>r.category==='Breakfast'],['Power Lunches',r=>r.category==='Lunch'],['Power Dinners',r=>r.category==='Dinner'],['Power Snacks',r=>r.category==='Snack'],['Nigerian favourites',r=>/Nigerian/.test(r.cuisine)]];el.innerHTML=`<div class=\"page-head\"><div><span class=\"eyebrow\">Cookbook</span><h1>The SabiPlate cookbook</h1><p>${recipes.length} recipes with gram weights, method and nutrition. Open any recipe to print it or save it as a PDF.</p></div></div><div class=\"cookbook-layout\"><div><img class=\"book-cover\" src=\"./assets/cookbook-cover.jpg?v=" + version + "\" alt=\"SabiPlate cookbook cover\"></div><div>${cols.map(([name,test])=>{const list=recipes.filter(test);return `<h2 style=\"font-family:Georgia,serif;color:var(--green);margin:18px 0 8px\">${name} <small class=\"muted\" style=\"font-size:13px;font-family:inherit\">${list.length} recipes</small></h2><div class=\"feature-list\">${list.map(r=>`<button type=\"button\" class=\"feature\" data-open=\"${esc(r.id)}\" style=\"text-align:left;cursor:pointer;font:inherit;width:100%\"><b>${esc(r.title)}</b><span>${r.calories} kcal · ${r.protein}g protein · ${r.prep} min</span></button>`).join('')}</div>`}).join('')}<div class=\"nutrition-note\">Calories and macros are estimates worked out from standard ingredient weights.</div></div></div>`;el.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openRecipe(b.dataset.open))}";
+const cookbook = (await readFile(path.join(root, 'release', 'cookbook.js'), 'utf8')).trim().replace('__VERSION__', version);
 html = html.slice(0, cbStart) + cookbook + html.slice(cbEnd + '</div></div></div>`}'.length);
 
 // 3b. Household form styling.
-replaceOnce('household css', '<style id="sabiplate-v15-styles">', '<style id="sabiplate-v15-styles">.v15-profile-person label{display:block;font-size:12px;font-weight:700;color:var(--green,#183c2b);margin-bottom:10px}.v15-profile-person input,.v15-profile-person select{display:block;width:100%;margin-top:4px;padding:11px 12px;min-height:44px;border:1px solid var(--line,#ead8c2);border-radius:12px;background:#fff;font:inherit;font-size:16px;font-weight:400;box-sizing:border-box}.v15-profile-person p{font-size:13px;color:#617067;margin:4px 0 10px}');
+replaceOnce('household css', '<style id="sabiplate-v15-styles">', '<style id="sabiplate-v15-styles">' + (await readFile(path.join(root, 'release', 'household.css'), 'utf8')).trim());
 
 // 4. Plain-language nutrition note in the recipe view.
 replaceOnce('nutrition label', '<b>Nutrition-calibrated prototype:</b>', '<b>Nutrition per serving (estimate):</b>');
