@@ -1,13 +1,34 @@
 # SabiPlate
 
-SabiPlate is a responsive Nigerian-aware meal-planning app with recipe discovery, personalised planning, a 14-day couple plan, shopping calculations, meal-prep guidance, and Supabase account/cloud-sync support.
+Know your food. Own your goals. A meal-planning app for households that eat the same food with different goals.
 
-## Deployment
+Live: https://sabiplate.vercel.app
 
-The validated repaired production source is stored in `source/site-source.tar.gz`. Vercel runs `npm run build`, and `build.mjs` extracts the production `index.html` and `assets/` folder into `dist/`.
+## Layout
 
-This packaging keeps all 100 recipe images, the homepage hero image and authentication bundle together without relying on private or temporary image URLs.
+- `site/` is the whole deployed app. Plain HTML, CSS and JavaScript; no framework and no build step.
+  - `index.html` holds the base app (recipes, Build My Day, cookbook, profile, fridge search).
+  - `assets/plan-engine.js` is the household plan: 14-day plan state, per-person portions, fortnight shop, prep plan.
+  - `assets/plan-data.js` is generated; do not edit by hand.
+  - `assets/plan.css`, `assets/recipes/*.webp`, cover art, and the bundled Supabase auth script.
+- `data/` is the recipe master pulled from Supabase (`recipes`, `recipe_ingredients`) plus the food table and the starter plan.
+- `tools/`
+  - `build-plan-data.mjs` rebuilds `site/assets/plan-data.js` from `data/` and the shop tables.
+  - `shop-items.txt`, `shop-map.json` map foods to things you buy (pack size, price estimate, storage).
+  - `check-site.mjs` is the pre-deploy check. Vercel runs it as the build command, so a broken site cannot ship.
+  - `photos/` holds the hand-picked real-photo choices and their licences (not yet downloaded into the site).
+- `src/auth-sync.js` is the source of the auth bundle; `supabase/migrations/` is the database history.
 
-## Production
+## Working on it
 
-Intended production URL: https://sabiplate.vercel.app
+```bash
+node tools/build-plan-data.mjs   # after changing data/ or the shop tables
+node tools/check-site.mjs        # before pushing
+cd site && python3 -m http.server 4173
+```
+
+Pushing to `main` deploys to production.
+
+## How portions work
+
+Every ingredient is a protein food, a carbohydrate food, a fat, or vegetables/other. For each person and day the engine finds one multiplier per group so the shared dishes land on that person's calories, protein and fat. Everyone eats from the same pot; the plates differ.

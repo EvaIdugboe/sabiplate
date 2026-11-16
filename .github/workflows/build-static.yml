@@ -1,27 +1,21 @@
-name: Build SabiPlate static site
+name: Check SabiPlate site
 
 on:
   push:
+    branches: [main, 'release/**']
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  build:
+  check:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm install --no-audit --no-fund
-      - run: npm run build
-      - name: Verify static output
-        run: |
-          test -f dist/index.html
-          test -f dist/assets/hero-wide.jpg
-          test -f dist/assets/cookbook-cover.jpg
-          test "$(ls dist/assets/recipes/*.webp | wc -l)" -eq 100
-          ! grep -q "MutationObserver" dist/index.html
+      - run: node tools/check-site.mjs

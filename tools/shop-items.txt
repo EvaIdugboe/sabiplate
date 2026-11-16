@@ -1,0 +1,104 @@
+# key|name|category|pack|unit|price|storage
+almonds|Almonds|Pantry|200|g|2.00|Cupboard
+apple|Apples|Produce|900|g|1.80|Refrigerate for two-week life
+asparagus|Asparagus|Produce|250|g|1.90|Refrigerate; use in week 1 or buy in the top-up
+aubergine|Aubergine|Produce|300|g|0.95|Refrigerate
+avocado|Avocados|Produce|200|g|1.60|Ripen on the counter, then refrigerate
+banana|Bananas|Produce|900|g|1.10|Counter; freeze ripe ones
+green_beans|Green beans|Produce|220|g|1.20|Refrigerate; frozen also works
+bell_pepper|Bell peppers|Produce|450|g|1.65|Refrigerate; chop/freeze week-2 portion
+berries|Frozen mixed berries|Frozen|500|g|2.50|Freezer
+black_beans_tin|Black beans (tinned, drained weight)|Pantry|240|g|0.70|Cupboard
+black_eyed_peas_dry|Black-eyed beans / peas (dry)|Pantry|2000|g|4.00|Cupboard
+broccoli|Broccoli|Produce|350|g|0.85|Refrigerate; frozen also works
+dry_brown_rice|Brown rice (dry)|Pantry|1000|g|1.90|Cupboard
+bulgur_dry|Bulgur wheat (dry)|Pantry|500|g|1.60|Cupboard
+burger_buns|Wholemeal burger buns|Bakery|6|count|1.20|Freeze what you will not use in 3 days
+cabbage|Cabbage|Produce|700|g|0.85|Refrigerate
+carrot|Carrots|Produce|1000|g|0.70|Refrigerate
+cauliflower|Cauliflower|Produce|600|g|1.10|Refrigerate; frozen also works
+chia|Chia seeds|Pantry|300|g|2.50|Cupboard
+chicken|Chicken breast fillets|Protein|1000|g|6.69|Portion and freeze what will not be used within 1–2 days
+chickpeas_tin|Chickpeas (tinned, drained weight)|Pantry|240|g|0.60|Cupboard
+coconut_flakes|Desiccated coconut|Pantry|200|g|1.40|Cupboard
+coconut_milk_light|Light coconut milk|Pantry|400|ml|1.00|Cupboard; refrigerate opened tins
+coconut_oil|Coconut oil|Pantry|300|g|3.00|Cupboard
+cocoyam|Cocoyam|World foods|1000|g|4.00|Cool, dry cupboard
+cod|Cod fillets (frozen)|Protein|400|g|4.50|Freezer
+cottage_cheese|Low-fat cottage cheese|Dairy|300|g|1.65|Refrigerate; choose longer-dated tubs
+courgette|Courgettes|Produce|500|g|1.50|Refrigerate
+dry_couscous|Couscous (dry)|Pantry|500|g|1.00|Cupboard
+cracker|Wholegrain crackers|Pantry|200|g|1.20|Cupboard
+cream_cheese_light|Light cream cheese|Dairy|200|g|1.20|Refrigerate
+croaker|Croaker fish|World foods|1000|g|9.00|Freeze in meal portions
+cucumber|Cucumber|Produce|350|g|0.85|Refrigerate
+dark_chocolate|Dark chocolate|Pantry|200|g|2.00|Cool cupboard
+dry_basmati_rice|Basmati rice (dry)|Pantry|5000|g|11.50|Cupboard
+dry_pasta|Pasta (dry)|Pantry|500|g|0.75|Cupboard
+dry_white_rice|Long-grain rice (dry)|Pantry|1000|g|1.60|Cupboard
+dry_wholewheat_pasta|Wholewheat pasta / spaghetti|Pantry|500|g|0.95|Cupboard
+garri|Garri (for eba)|World foods|1500|g|4.50|Cupboard
+edamame|Edamame beans (frozen)|Frozen|500|g|2.75|Freezer
+eggs|Eggs|Protein|12|count|3.00|Store as label directs; check best-before date
+egg_white|Liquid egg whites|Dairy|500|g|2.50|Refrigerate; freeze spare
+flaxseed|Flaxseed|Pantry|250|g|1.50|Cupboard
+granola|Granola|Pantry|500|g|2.00|Cupboard
+greek_yogurt|0% Greek-style yoghurt|Dairy|1000|g|1.70|Refrigerate; choose longer-dated unopened tubs
+honey|Honey|Pantry|340|g|1.60|Cupboard
+hummus|Hummus|Dairy|200|g|1.25|Refrigerate; buy the second tub in the top-up
+kidney_beans_tin|Kidney beans (tinned, drained weight)|Pantry|240|g|0.60|Cupboard
+leafy_greens|Leafy greens (ugwu, efo tete or spinach)|World foods|500|g|2.00|Freezer, or refrigerate and use within 3 days
+lean_beef|Lean beef (strips or 5% mince)|Protein|500|g|4.75|Freeze in meal portions
+lentils_dry|Lentils (dry)|Pantry|500|g|1.60|Cupboard
+lettuce|Lettuce|Produce|300|g|0.85|Refrigerate; buy week 2's in the top-up
+mango|Mango chunks (frozen)|Frozen|500|g|2.50|Freezer
+maple|Maple syrup|Pantry|250|ml|3.50|Cupboard
+milk|Semi-skimmed milk|Dairy|2000|ml|1.55|Refrigerate; freeze spare milk if date is short
+mixed_veg|Frozen mixed vegetables|Frozen|1000|g|1.50|Freezer
+oats|Rolled oats|Pantry|1000|g|1.30|Cupboard
+ogbono_seed|Ground ogbono|World foods|200|g|4.00|Cupboard
+okra|Okra|World foods|400|g|1.80|Freezer, or refrigerate and use within 3 days
+olive_oil|Olive oil|Pantry|1000|ml|5.50|Cupboard
+onion|Onions|Produce|1000|g|1.00|Cool, dry cupboard
+palm_fruit|Palm fruit concentrate (banga)|World foods|800|g|3.50|Cupboard; freeze what is left
+palm_oil|Palm oil|World foods|500|ml|3.00|Cupboard
+parmesan|Parmesan|Dairy|100|g|2.00|Refrigerate
+peanut_butter|Peanut butter|Pantry|340|g|1.75|Cupboard
+peanuts|Peanuts|Pantry|300|g|1.50|Cupboard
+pear|Pears|Produce|550|g|1.50|Refrigerate
+peas|Frozen peas|Frozen|900|g|1.40|Freezer
+pecans|Pecans|Pantry|100|g|2.20|Cupboard
+pesto|Green pesto|Pantry|190|g|1.50|Cupboard; refrigerate once open
+pineapple|Pineapple in juice (tinned, drained weight)|Pantry|260|g|1.00|Cupboard
+pitta|Wholemeal pittas|Bakery|6|count|0.90|Freeze what you will not use in 3 days
+plantain|Plantain|World foods|540|g|1.80|Counter; ripens over the fortnight
+popcorn|Popping corn|Pantry|500|g|1.50|Cupboard
+potato|Potatoes|Produce|2000|g|1.60|Cool, dark cupboard
+prawns|Prawns|Protein|500|g|5.25|Frozen is easiest for a fortnight shop
+protein_powder|Protein powder|Pantry|1000|g|18.00|Cupboard
+pumpkin_seeds|Pumpkin seeds|Pantry|250|g|2.50|Cupboard
+quinoa_dry|Quinoa (dry)|Pantry|500|g|2.75|Cupboard
+ricotta|Ricotta|Dairy|250|g|1.20|Refrigerate
+salmon|Salmon fillets|Protein|500|g|7.50|Freeze in meal portions
+sardines|Tinned sardines|Pantry|360|g|2.50|Cupboard
+sesame_oil|Sesame oil|Pantry|250|ml|2.20|Cupboard
+sesame_seeds|Sesame seeds|Pantry|100|g|1.10|Cupboard
+spinach|Spinach (frozen recommended)|Frozen|500|g|1.50|Freezer
+sweet_potato|Sweet potatoes|Produce|1000|g|1.50|Cool, dark cupboard
+sweetcorn|Sweetcorn (frozen)|Frozen|1000|g|1.60|Freezer
+tahini|Tahini|Pantry|300|g|3.00|Cupboard
+tilapia|Tilapia|World foods|1000|g|7.50|Freeze in meal portions
+tofu|Firm tofu|Dairy|300|g|1.60|Refrigerate; long-dated
+tinned_tomatoes|Chopped tomatoes / passata|Pantry|400|g|0.47|Cupboard; batch sauces can be frozen
+fresh_tomatoes|Fresh tomatoes|Produce|500|g|1.25|Refrigerate; buy firmer fruit for week 2
+tuna_canned|Tinned tuna (drained weight)|Pantry|110|g|0.90|Cupboard
+tuna_steak|Tuna steaks|Protein|400|g|5.00|Freezer
+turkey_breast|Turkey breast / strips|Protein|500|g|4.00|Freeze in meal portions
+turkey_mince|Lean turkey mince|Protein|500|g|3.75|Freeze in meal portions
+walnuts|Walnuts|Pantry|200|g|2.20|Cupboard
+wheat_meal|Wheat meal / semovita (for swallow)|World foods|1500|g|4.00|Cupboard
+white_fish|White fish fillets|Protein|1000|g|7.00|Freeze in meal portions
+wholegrain_bread|Wholegrain bread|Bakery|800|g|1.30|Freeze half the loaf
+wraps|Wholewheat wraps|Bakery|8|count|1.50|Freeze second pack if needed
+yam|Yam|World foods|1000|g|4.50|Cool, dry cupboard
+yogurt|Natural yoghurt|Dairy|500|g|1.10|Refrigerate

@@ -1,0 +1,42 @@
+/* Household plan: additions on top of the existing v15 styles. */
+.sp-toolbar{display:flex;gap:8px;flex-wrap:wrap}
+.sp-actions{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 2px}
+.sp-actions button{border:1px solid var(--line,#ead8c2);background:#fff;color:var(--green,#183c2b);border-radius:999px;padding:9px 14px;min-height:40px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.sp-actions button:hover,.sp-actions button:focus-visible{border-color:var(--green,#183c2b)}
+.sp-actions button[aria-pressed="true"]{background:var(--green,#183c2b);color:#fff;border-color:var(--green,#183c2b)}
+.sp-lock{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;background:var(--green,#183c2b);color:#fff;border-radius:999px;padding:3px 8px;margin-left:8px;white-space:nowrap}
+.sp-empty{display:block;width:100%;margin:10px 0;padding:16px;min-height:52px;border:2px dashed var(--line,#ead8c2);border-radius:16px;background:transparent;color:var(--green,#183c2b);font:inherit;font-weight:700;cursor:pointer}
+.sp-empty:hover,.sp-empty:focus-visible{border-color:var(--green,#183c2b);background:#fff}
+.sp-off{font-style:normal;font-weight:700;color:#b4532a;white-space:nowrap}
+.sp-cat{font-family:Georgia,serif;color:var(--green,#183c2b);font-size:19px;margin:20px 0 8px}
+.sp-link{border:0;background:none;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer;text-decoration:underline;text-decoration-color:var(--line,#ead8c2);text-underline-offset:3px}
+.sp-check{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid var(--line,#ead8c2);border-radius:14px;padding:12px;margin:0 0 12px;font-size:14px}
+.sp-check input{width:20px;height:20px;margin-top:1px;flex:none}
+.sp-daygrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px}
+.sp-daygrid button{border:1px solid var(--line,#ead8c2);background:#fff;border-radius:12px;padding:8px 4px;min-height:64px;font:inherit;cursor:pointer;color:var(--green,#183c2b);overflow:hidden}
+.sp-daygrid button b{display:block;font-size:14px}
+.sp-daygrid button small{display:block;font-size:10px;color:#647269;line-height:1.2;max-height:2.4em;overflow:hidden}
+.sp-daygrid button.active{background:var(--green,#183c2b);border-color:var(--green,#183c2b);color:#fff}
+.sp-daygrid button.active small{color:#dfeee5}
+.sp-daygrid button:disabled{opacity:.5;cursor:not-allowed}
+.sp-macros{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.v15-profile-person input:disabled{background:#f3ede4;color:#617067}
+.v15-meal-title{display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+.v15-target small+small{margin-top:2px}
+#spModal .chooser-card{max-width:760px}
+#spModal .picker-slots{display:flex;gap:8px;margin:0 0 12px}
+#spModal .picker-slots button{border:1px solid var(--line,#ead8c2);background:#fff;border-radius:999px;padding:10px 18px;min-height:44px;font:inherit;font-weight:700;color:var(--green,#183c2b);cursor:pointer}
+#spModal .picker-slots button.active{background:var(--green,#183c2b);color:#fff;border-color:var(--green,#183c2b)}
+#spModal .primary-btn.full{width:100%;margin-top:14px}
+#spModal .primary-btn:disabled{opacity:.55;cursor:not-allowed}
+@media (max-width:640px){
+  .sp-daygrid{grid-template-columns:repeat(4,1fr)}
+  #spModal .chooser-card{margin:0;max-height:100vh;min-height:100vh;border-radius:0;padding:18px 14px 28px}
+  #spModal .chooser-head{flex-direction:column;align-items:stretch}
+  #spModal .chooser-head input{max-width:none}
+  #spModal .chooser-item{grid-template-columns:56px 1fr auto;gap:10px}
+  #spModal .chooser-item img{width:56px;height:52px}
+  .sp-toolbar{width:100%}
+  .sp-toolbar .ghost-btn{flex:1 1 40%;width:auto;min-height:44px;padding-left:10px;padding-right:10px}
+}
+@media print{.sp-actions,.sp-empty,.sp-toolbar{display:none!important}}
