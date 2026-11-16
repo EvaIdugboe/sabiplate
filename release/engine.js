@@ -32,7 +32,7 @@ tomato:'tomato',tomato_pepper_sauce:'tomato-pepper sauce',mixed_veg:'mixed veget
 olive_oil:'olive oil',palm_oil:'palm oil',wrap:'wholewheat wrap',protein_powder:'protein powder',peanut_butter:'peanut butter',
 dark_chocolate:'dark chocolate',spinach:'spinach',carrot:'carrot',milk:'milk',honey:'honey',chia:'chia seeds',almonds:'almonds',peanuts:'peanuts',flaxseed:'flaxseed'
 };
-const fmtg=(g,key)=>{g=Number(g);if(key==='egg')return Math.max(1,Math.round(g/50))+' egg'+(Math.round(g/50)===1?'':'s');if(key==='wrap')return (g/60).toFixed(1).replace('.0','')+' wrap(s)';return g>=1000?(g/1000).toFixed(2).replace(/0+$/,'').replace(/\.$/,'')+'kg':Math.round(g)+'g'};
+const fmtg=(g,key)=>{g=Number(g);if(key==='egg')return Math.max(1,Math.round(g/50))+' egg'+(Math.round(g/50)===1?'':'s');if(key==='wrap')return (g/60).toFixed(1).replace('.0','')+' wrap(s)';return g>=1000?(g/1000).toFixed(2).replace(/0+$/,'').replace(/[.]$/,'')+'kg':Math.round(g)+'g'};
 const important=new Set(['chicken','turkey_breast','lean_beef','prawns','white_fish','sardines','egg','dry_basmati_rice','dry_white_rice','basmati_rice','dry_wholewheat_pasta','black_eyed_peas_dry','black_eyed_peas_cooked','wrap','oats','greek_yogurt','cottage_cheese','apple','berries','olive_oil']);
 
 /* ---- Portion engine -------------------------------------------------------

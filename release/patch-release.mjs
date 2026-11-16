@@ -52,12 +52,10 @@ await sharp({ create: { width: 1200, height: 1600, channels: 3, background: '#f4
   .composite([{ input: coverSvg, left: 0, top: 0 }, { input: tiles[0], left: 95, top: 640 }, { input: tiles[1], left: 625, top: 640 }, { input: tiles[2], left: 95, top: 1040 }, { input: tiles[3], left: 625, top: 1040 }])
   .jpeg({ quality: 92 }).toFile(path.join(dist, 'assets', 'cookbook-cover.jpg'));
 
-const heroRef = /\.\/assets\/(?:sabiplate-brand-reference\.jpg|hero-cover-hq\.jpg\?v=[\w-]+)/g;
-const refs = html.match(heroRef) || [];
-if (refs.length !== 2) throw new Error(`Expected 2 cover references, found ${refs.length}`);
-let seen = 0;
-html = html.replace(heroRef, () => (seen++ === 0 ? `./assets/hero-wide.jpg?v=${version}` : `./assets/cookbook-cover.jpg?v=${version}`));
-html = html.replace(/\.hero-visual\{min-height:430px;background:center(?: 24%)?\/cover no-repeat;position:relative\}/, '.hero-visual{min-height:430px;background:center/cover no-repeat;position:relative}');
+const oldCover = './assets/sabiplate-brand-reference.jpg';
+const coverParts = html.split(oldCover);
+if (coverParts.length !== 3) throw new Error(`Expected 2 cover references, found ${coverParts.length - 1}`);
+html = coverParts[0] + `./assets/hero-wide.jpg?v=${version}` + coverParts[1] + `./assets/cookbook-cover.jpg?v=${version}` + coverParts[2];
 
 // 3. Cookbook page: collections instead of internal product notes.
 const cbStart = html.indexOf('function renderCookbook(){');
