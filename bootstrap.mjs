@@ -27,7 +27,10 @@ for (const file of Object.keys(expected)) {
 }
 for (const [file, want] of Object.entries(expected)) {
   const got = hash(await readFile(file, 'utf8'));
-  if (got !== want) throw new Error('Integrity check failed for ' + file + ': ' + got);
+  if (got !== want) {
+    const lines = norm(await readFile(file, 'utf8')).split(NL).map((l, i) => (i + 1) + ':' + createHash('sha256').update(l).digest('hex').slice(0, 5));
+    throw new Error('Integrity check failed for ' + file + ': ' + got + ' lines ' + lines.join(' '));
+  }
 }
 await import('./build.mjs');
 await import('./release/patch-release.mjs');
