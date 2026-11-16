@@ -1,18 +1,4 @@
-import { access, writeFile } from 'node:fs/promises';
-
-const files = ['build.mjs', 'hero-preview.mjs'];
-for (const file of files) {
-  try {
-    await access(file);
-  } catch {
-    const url = `https://raw.githubusercontent.com/EvaIdugboe/sabiplate/main/${file}`;
-    const response = await fetch(url, { redirect: 'follow' });
-    if (!response.ok) throw new Error(`Could not fetch ${file}: ${response.status} ${response.statusText}`);
-    await writeFile(file, Buffer.from(await response.arrayBuffer()));
-    console.log(`Fetched ${file} from the SabiPlate main branch.`);
-  }
-}
-
+// Build order: unpack the archived app, then apply the current release patch.
 await import('./build.mjs');
-await import('./hero-preview.mjs');
-console.log('Approved mixed hero build complete. Recipe image mapping remains unchanged.');
+await import('./release/patch-release.mjs');
+console.log('SabiPlate build complete.');

@@ -1,0 +1,77 @@
+// Release 2026-11-17: household engine, SabiPlate cover art, cookbook copy.
+// Applied to dist/ after build.mjs has unpacked the archived source.
+import { readFile, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import sharp from 'sharp';
+
+const root = process.cwd();
+const dist = path.join(root, 'dist');
+const version = '20261117-r1';
+const indexPath = path.join(dist, 'index.html');
+let html = await readFile(indexPath, 'utf8');
+
+function replaceOnce(label, from, to) {
+  const count = html.split(from).length - 1;
+  if (count !== 1) throw new Error(`${label}: expected exactly 1 match, found ${count}`);
+  html = html.replace(from, () => to);
+}
+
+// 1. Household engine replaces the fixed two-person code that follows the plan data.
+const engine = await readFile(path.join(root, 'release', 'engine.js'), 'utf8');
+const scriptStart = html.indexOf('<script id="sabiplate-v15-engine">');
+const codeStart = html.indexOf(';\nconst dbg=window.SABI_DEBUG;if(!dbg)return;', scriptStart);
+const scriptEnd = html.indexOf('</script>', scriptStart);
+if (scriptStart < 0 || codeStart < 0 || scriptEnd < 0) throw new Error('Could not locate the plan engine block.');
+html = html.slice(0, codeStart) + engine + html.slice(scriptEnd);
+
+// 2. Cover art. Tiles are used at native size, never enlarged.
+const tileIds = ['jollof-rice-with-grilled-chicken', 'grilled-salmon-rice-bowl', 'moi-moi-boiled-egg', 'chicken-shawarma-wrap'];
+const tiles = [];
+for (const id of tileIds) {
+  const input = await readFile(path.join(dist, 'assets', 'recipes', `${id}.webp`));
+  tiles.push(await sharp(input).resize({ width: 480, height: 360, fit: 'cover', withoutEnlargement: true }).jpeg({ quality: 92 }).toBuffer());
+}
+await sharp({ create: { width: 960, height: 720, channels: 3, background: '#f4eadc' } })
+  .composite([{ input: tiles[0], left: 0, top: 0 }, { input: tiles[1], left: 480, top: 0 }, { input: tiles[2], left: 0, top: 360 }, { input: tiles[3], left: 480, top: 360 }])
+  .jpeg({ quality: 90 }).toFile(path.join(dist, 'assets', 'hero-wide.jpg'));
+
+const coverSvg = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1600">
+  <rect width="1200" height="1600" fill="#f4eadc"/>
+  <rect x="28" y="28" width="1144" height="1544" rx="36" fill="#fffaf3" stroke="#d7c3aa" stroke-width="3"/>
+  <g text-anchor="middle">
+    <text x="600" y="250" font-family="Georgia, serif" font-size="150" font-weight="700" fill="#154d35">SabiPlate</text>
+    <text x="600" y="345" font-family="Georgia, serif" font-size="54" font-style="italic" fill="#c76845">Know your food. Own your goals.</text>
+    <line x1="220" y1="410" x2="980" y2="410" stroke="#c76845" stroke-width="5"/>
+    <text x="600" y="485" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="700" fill="#154d35">NIGERIAN + GLOBAL RECIPES</text>
+    <text x="600" y="532" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="700" fill="#154d35">MEAL PLANS &amp; MEAL PREP</text>
+  </g>
+  <rect x="28" y="1490" width="1144" height="82" fill="#154d35"/>
+  <text x="600" y="1542" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" letter-spacing="2" fill="#f8efe4">SAME FOOD. DIFFERENT GOALS.</text>
+</svg>`);
+await sharp({ create: { width: 1200, height: 1600, channels: 3, background: '#f4eadc' } })
+  .composite([{ input: coverSvg, left: 0, top: 0 }, { input: tiles[0], left: 95, top: 640 }, { input: tiles[1], left: 625, top: 640 }, { input: tiles[2], left: 95, top: 1040 }, { input: tiles[3], left: 625, top: 1040 }])
+  .jpeg({ quality: 92 }).toFile(path.join(dist, 'assets', 'cookbook-cover.jpg'));
+
+const heroRef = /\.\/assets\/(?:sabiplate-brand-reference\.jpg|hero-cover-hq\.jpg\?v=[\w-]+)/g;
+const refs = html.match(heroRef) || [];
+if (refs.length !== 2) throw new Error(`Expected 2 cover references, found ${refs.length}`);
+let seen = 0;
+html = html.replace(heroRef, () => (seen++ === 0 ? `./assets/hero-wide.jpg?v=${version}` : `./assets/cookbook-cover.jpg?v=${version}`));
+html = html.replace(/\.hero-visual\{min-height:430px;background:center(?: 24%)?\/cover no-repeat;position:relative\}/, '.hero-visual{min-height:430px;background:center/cover no-repeat;position:relative}');
+
+// 3. Cookbook page: collections instead of internal product notes.
+const cbStart = html.indexOf('function renderCookbook(){');
+const cbEnd = html.indexOf('</div></div></div>`}', cbStart);
+if (cbStart < 0 || cbEnd < 0) throw new Error('Could not locate renderCookbook.');
+const cookbook = "function renderCookbook(){const el=$('#view-cookbook');const cols=[['Power Breakfasts',r=>r.category==='Breakfast'],['Power Lunches',r=>r.category==='Lunch'],['Power Dinners',r=>r.category==='Dinner'],['Power Snacks',r=>r.category==='Snack'],['Nigerian favourites',r=>/Nigerian/.test(r.cuisine)]];el.innerHTML=`<div class=\"page-head\"><div><span class=\"eyebrow\">Cookbook</span><h1>The SabiPlate cookbook</h1><p>${recipes.length} recipes with gram weights, method and nutrition. Open any recipe to print it or save it as a PDF.</p></div></div><div class=\"cookbook-layout\"><div><img class=\"book-cover\" src=\"./assets/cookbook-cover.jpg?v=" + version + "\" alt=\"SabiPlate cookbook cover\"></div><div>${cols.map(([name,test])=>{const list=recipes.filter(test);return `<h2 style=\"font-family:Georgia,serif;color:var(--green);margin:18px 0 8px\">${name} <small class=\"muted\" style=\"font-size:13px;font-family:inherit\">${list.length} recipes</small></h2><div class=\"feature-list\">${list.map(r=>`<button type=\"button\" class=\"feature\" data-open=\"${esc(r.id)}\" style=\"text-align:left;cursor:pointer;font:inherit;width:100%\"><b>${esc(r.title)}</b><span>${r.calories} kcal · ${r.protein}g protein · ${r.prep} min</span></button>`).join('')}</div>`}).join('')}<div class=\"nutrition-note\">Calories and macros are estimates worked out from standard ingredient weights.</div></div></div>`;el.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openRecipe(b.dataset.open))}";
+html = html.slice(0, cbStart) + cookbook + html.slice(cbEnd + '</div></div></div>`}'.length);
+
+// 3b. Household form styling.
+replaceOnce('household css', '<style id="sabiplate-v15-styles">', '<style id="sabiplate-v15-styles">.v15-profile-person label{display:block;font-size:12px;font-weight:700;color:var(--green,#183c2b);margin-bottom:10px}.v15-profile-person input,.v15-profile-person select{display:block;width:100%;margin-top:4px;padding:11px 12px;min-height:44px;border:1px solid var(--line,#ead8c2);border-radius:12px;background:#fff;font:inherit;font-size:16px;font-weight:400;box-sizing:border-box}.v15-profile-person p{font-size:13px;color:#617067;margin:4px 0 10px}');
+
+// 4. Plain-language nutrition note in the recipe view.
+replaceOnce('nutrition label', '<b>Nutrition-calibrated prototype:</b>', '<b>Nutrition per serving (estimate):</b>');
+replaceOnce('nutrition tail', ' per standardised serving. Exact gram weights are shown beside ingredients. Final commercial verification against an authoritative food-composition database is still required.', '. Worked out from the gram weights shown beside each ingredient.');
+
+await writeFile(indexPath, html);
+console.log(`Release ${version} applied: household engine, SabiPlate cover art, cookbook collections.`);
