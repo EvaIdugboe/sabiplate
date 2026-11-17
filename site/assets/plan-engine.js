@@ -251,7 +251,7 @@ function targetCards() {
 }
 function mealCard(di, slot, entry) {
   const r = rmap[entry.id], key = `${di}|${slot}`;
-  return `<div class="v15-meal"><button type="button" class="v15-meal-img" data-sp-view="${esc(entry.id)}"><img src="${esc(img(entry.id))}" alt="${esc(r.title)}" loading="lazy"><em>${slot}</em></button><div class="v15-meal-body"><div class="v15-meal-title"><b>${esc(r.title)}</b>${entry.lock ? '<span class="sp-lock">Locked</span>' : ''}</div><div class="sp-actions no-print"><button type="button" data-sp-view="${esc(entry.id)}">Recipe</button><button type="button" data-sp-swap="${key}">Swap</button><button type="button" data-sp-lock="${key}" aria-pressed="${entry.lock}">${entry.lock ? 'Unlock' : 'Lock'}</button><button type="button" data-sp-remove="${key}">Remove</button></div><div class="v15-plates">${entry.plates.map((p, i) => `<div class="v15-plate ${tone(i)}"><span class="label">${esc(members[i].name)}'s plate</span><strong>${Math.round(p.kcal)} kcal</strong><small>${p.protein.toFixed(0)}g protein · ${p.carbs.toFixed(0)}g carbs · ${p.fat.toFixed(0)}g fat</small><div class="v15-keyportion">${esc(keyPortion(p))}</div><details><summary>All quantities</summary><ul>${exactList(p)}</ul></details></div>`).join('')}</div></div></div>`;
+  return `<div class="v15-meal"><button type="button" class="v15-meal-img" data-sp-view="${esc(entry.id)}"><img src="${esc(img(entry.id))}" alt="${esc(r.title)}" loading="lazy"><em>${slot}</em></button><div class="v15-meal-body"><div class="v15-meal-title"><b>${esc(r.title)}</b>${entry.lock ? '<span class="sp-lock">Locked</span>' : ''}</div><div class="sp-actions no-print"><button type="button" data-sp-view="${esc(entry.id)}">Recipe</button><button type="button" data-sp-swap="${key}">Swap</button><button type="button" data-sp-lock="${key}" aria-pressed="${entry.lock}">${entry.lock ? 'Unlock' : 'Lock'}</button><button type="button" data-sp-remove="${key}">Remove</button></div><div class="v15-plates">${entry.plates.map((p, i) => `<div class="v15-plate ${tone(i)}"><span class="label">${members[i].name === 'Me' ? 'My' : esc(members[i].name) + '\'s'} plate</span><strong>${Math.round(p.kcal)} kcal</strong><small>${p.protein.toFixed(0)}g protein · ${p.carbs.toFixed(0)}g carbs · ${p.fat.toFixed(0)}g fat</small><div class="v15-keyportion">${esc(keyPortion(p))}</div><details><summary>All quantities</summary><ul>${exactList(p)}</ul></details></div>`).join('')}</div></div></div>`;
 }
 function dayTotalsHtml(x) {
   const mo = buildModel();
@@ -260,6 +260,17 @@ function dayTotalsHtml(x) {
     return `<div class="${i % 2 ? 'm' : 'f'}"><b>${esc(members[i].name)}:</b> ${Math.round(t.kcal)} kcal · ${t.protein.toFixed(0)}g protein${off ? ` <em class="sp-off">${Math.abs(diff)} kcal ${diff < 0 ? 'under' : 'over'}</em>` : ''}</div>`;
   }).join('');
 }
+let dayPick = null;
+function pickedDay(visible) {
+  const ids = visible.map(x => x.di);
+  if (dayPick !== null && ids.includes(dayPick)) return dayPick;
+  const t = todayIndex();
+  return ids.includes(t) ? t : ids[0];
+}
+function dayTabs(visible) {
+  const cur = pickedDay(visible);
+  return `<div class="v15-day-tabs no-print" role="tablist" aria-label="Choose a day">${visible.map(x => `<button type="button" role="tab" aria-selected="${x.di === cur}" class="${x.di === cur ? 'active' : ''}" data-sp-day="${x.di}"><b>${DAY_NAMES[x.di % 7]}</b><small>${x.di === todayIndex() ? 'Today' : 'Day ' + (x.di + 1)}</small></button>`).join('')}</div>`;
+}
 function plannerHtml() {
   const mo = buildModel(), c = currentCosts(), prep = prepModel();
   const mainCount = {};
@@ -267,7 +278,7 @@ function plannerHtml() {
   const mains = Object.entries(mainCount).sort((a, b) => b[1] - a[1]);
   const sessions = prep.reduce((n, w) => n + w.sessions.length, 0);
   const visible = mo.days.filter(x => week === 'all' || String(Math.floor(x.di / 7) + 1) === String(week));
-  return `<section class="v15-card v15-hero"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap"><div><span class="eyebrow">${planWord()} · 14 days</span><h2>${headline()} One shop.</h2></div><div class="sp-toolbar no-print"><button type="button" id="spEditHouse" class="ghost-btn">Edit household</button><button type="button" id="spShuffle" class="ghost-btn" title="New meals everywhere except the ones you've locked">Shuffle meals</button><button type="button" id="spReset" class="ghost-btn">Reset plan</button>${undoPlan ? '<button type="button" id="spUndo" class="ghost-btn">Undo</button>' : ''}</div></div>${targetCards()}<div class="v15-summary"><div><b>${mains.length}</b><small>main dishes</small></div><div><b>${sessions}</b><small>cooking sessions</small></div><div><b>${countMeals()}</b><small>meals planned</small></div><div><b>${money(c.first)}</b><small>first shop (estimate)</small></div></div>${mains.length > 8 ? `<div class="v15-note"><b>That is ${mains.length} different main dishes.</b> Fewer dishes means less cooking. Swap a few so the same batch covers more meals.</div>` : ''}<h3 style="font-family:Georgia,serif;color:var(--green)">Your batch menu</h3><div class="v15-gallery">${mains.map(([id, n]) => `<button type="button" data-sp-view="${esc(id)}"><img src="${esc(img(id))}" alt="${esc(rmap[id].title)}" loading="lazy"><span><small>${n} meal${n === 1 ? '' : 's'}</small><b>${esc(rmap[id].title)}</b></span></button>`).join('')}</div><div class="v15-week-tabs no-print"><button type="button" data-sp-week="1" class="${week === '1' ? 'active' : ''}">Week 1</button><button type="button" data-sp-week="2" class="${week === '2' ? 'active' : ''}">Week 2</button><button type="button" data-sp-week="all" class="${week === 'all' ? 'active' : ''}">All 14 days</button></div><div class="v15-days">${visible.map(x => `<article class="v15-day"><div class="v15-day-head"><div><small>Week ${Math.floor(x.di / 7) + 1}</small><h3>${DAY_NAMES[x.di % 7]} · Day ${x.di + 1}</h3></div><div class="v15-day-totals">${Object.keys(x.meals).length ? dayTotalsHtml(x) : '<div>No meals planned</div>'}</div></div>${SLOTS.map(s => x.meals[s] ? mealCard(x.di, s, x.meals[s]) : `<button type="button" class="sp-empty no-print" data-sp-add="${x.di}|${s}">+ Add ${s.toLowerCase()}</button>`).join('')}</article>`).join('')}</div><div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"><button type="button" class="primary-btn" id="spGoShop">See fortnight shop + cost</button><button type="button" class="secondary-btn" id="spGoPrep">See prep plan</button><button type="button" class="ghost-btn" id="spPrint">Print / Save PDF</button></div></section>`;
+  return `<section class="v15-card v15-hero"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap"><div><span class="eyebrow">${planWord()} · 14 days</span><h2>${headline()} One shop.</h2></div><div class="sp-toolbar no-print"><button type="button" id="spEditHouse" class="ghost-btn">Edit household</button><button type="button" id="spShuffle" class="ghost-btn" title="New meals everywhere except the ones you've locked">Shuffle meals</button><button type="button" id="spReset" class="ghost-btn">Reset plan</button>${undoPlan ? '<button type="button" id="spUndo" class="ghost-btn">Undo</button>' : ''}</div></div>${targetCards()}<div class="v15-summary"><div><b>${mains.length}</b><small>main dishes</small></div><div><b>${sessions}</b><small>cooking sessions</small></div><div><b>${countMeals()}</b><small>meals planned</small></div><div><b>${money(c.first)}</b><small>first shop (estimate)</small></div></div>${mains.length > 8 ? `<div class="v15-note"><b>That is ${mains.length} different main dishes.</b> Fewer dishes means less cooking. Swap a few so the same batch covers more meals.</div>` : ''}<h3 style="font-family:Georgia,serif;color:var(--green)">Your batch menu</h3><div class="v15-gallery">${mains.map(([id, n]) => `<button type="button" data-sp-view="${esc(id)}"><img src="${esc(img(id))}" alt="${esc(rmap[id].title)}" loading="lazy"><span><small>${n} meal${n === 1 ? '' : 's'}</small><b>${esc(rmap[id].title)}</b></span></button>`).join('')}</div><div class="v15-week-tabs no-print"><button type="button" data-sp-week="1" class="${week === '1' ? 'active' : ''}">Week 1</button><button type="button" data-sp-week="2" class="${week === '2' ? 'active' : ''}">Week 2</button><button type="button" data-sp-week="all" class="${week === 'all' ? 'active' : ''}">All 14 days</button></div>${dayTabs(visible)}<div class="v15-days">${visible.map(x => `<article class="v15-day ${x.di === pickedDay(visible) ? 'picked' : ''}" id="spDay${x.di}"><div class="v15-day-head"><div><small>Week ${Math.floor(x.di / 7) + 1}</small><h3>${DAY_NAMES[x.di % 7]} · Day ${x.di + 1}</h3></div><div class="v15-day-totals">${Object.keys(x.meals).length ? dayTotalsHtml(x) : '<div>No meals planned</div>'}</div></div>${SLOTS.map(s => x.meals[s] ? mealCard(x.di, s, x.meals[s]) : `<button type="button" class="sp-empty no-print" data-sp-add="${x.di}|${s}">+ Add ${s.toLowerCase()}</button>`).join('')}</article>`).join('')}</div><div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"><button type="button" class="primary-btn" id="spGoShop">See fortnight shop + cost</button><button type="button" class="secondary-btn" id="spGoPrep">See prep plan</button><button type="button" class="ghost-btn" id="spPrint">Print / Save PDF</button></div></section>`;
 }
 
 /* ---------- Shop view ---------- */
@@ -447,7 +458,8 @@ function injectPlanner() {
   block.addEventListener('click', e => {
     const t = e.target.closest('button'); if (!t) return;
     const split = v => { const [d, s] = v.split('|'); return [Number(d), s]; };
-    if (t.dataset.spWeek) { week = t.dataset.spWeek; store.set('sabiplate-v15-week', week); injectPlanner(); }
+    if (t.dataset.spDay) { dayPick = Number(t.dataset.spDay); injectPlanner(); const tab = document.querySelector(`[data-sp-day="${dayPick}"]`); tab?.scrollIntoView({ block: 'nearest', inline: 'center' }); }
+    else if (t.dataset.spWeek) { week = t.dataset.spWeek; store.set('sabiplate-v15-week', week); injectPlanner(); }
     else if (t.dataset.spSwap) openSwap(...split(t.dataset.spSwap));
     else if (t.dataset.spAdd) openSwap(...split(t.dataset.spAdd));
     else if (t.dataset.spLock) { const [d, s] = split(t.dataset.spLock), next = clonePlan(); next.days[d][s].lock = !next.days[d][s].lock; commitPlan(next, next.days[d][s].lock ? 'Locked. Shuffle will keep this meal.' : 'Unlocked'); }
@@ -548,14 +560,47 @@ function onView(name) {
   if (name === 'profile') injectProfile();
 }
 window.addEventListener('sabiplate:view-rendered', event => onView(event.detail?.name));
+/* ---------- First-visit welcome ---------- */
+function welcomeRow(i, m) {
+  return `<div class="welcome-person" data-wp="${i}"><label>Name<input data-w="name" value="${esc(m?.name && !/^Person \d+$/.test(m.name) ? m.name : '')}" placeholder="${i === 0 ? 'Your name' : 'Name'}" maxlength="24" autocomplete="off"></label><label>Goal<select data-w="goal">${['loss', 'maintain', 'gain'].map(k => `<option value="${k}" ${(m?.goal || 'maintain') === k ? 'selected' : ''}>${{ loss: 'Lose fat', maintain: 'Stay the same', gain: 'Build muscle' }[k]}</option>`).join('')}</select></label><label>Calories a day<input data-w="kcal" type="number" inputmode="numeric" min="${MIN_KCAL}" max="${MAX_KCAL}" step="50" value="${m?.kcal || GOAL_KCAL.maintain}"></label></div>`;
+}
+function openWelcome() {
+  let count = Math.min(4, Math.max(1, members.length));
+  const draw = body => {
+    const rows = body.querySelector('#wRows'), cur = [...rows.querySelectorAll('[data-wp]')].map(r => ({ name: r.querySelector('[data-w="name"]').value, goal: r.querySelector('[data-w="goal"]').value, kcal: Number(r.querySelector('[data-w="kcal"]').value) }));
+    rows.innerHTML = Array.from({ length: count }, (_, i) => welcomeRow(i, cur[i] || members[i])).join('');
+    body.querySelectorAll('[data-wcount]').forEach(b => { b.classList.toggle('active', Number(b.dataset.wcount) === count); b.setAttribute('aria-pressed', Number(b.dataset.wcount) === count); });
+    rows.querySelectorAll('[data-w="goal"]').forEach(sel => sel.onchange = () => { sel.closest('[data-wp]').querySelector('[data-w="kcal"]').value = GOAL_KCAL[sel.value]; });
+  };
+  const body = openModal(`<div class="chooser-head"><div><span class="eyebrow">Welcome to SabiPlate</span><h2 id="spModalTitle">Who's eating?</h2></div></div><div class="welcome-form"><p class="muted" style="margin:0">Everyone eats the same meals. SabiPlate portions each plate to the person's daily calories, then builds one shopping list and prep plan.</p><div><b style="display:block;margin-bottom:6px;color:var(--green)">How many people?</b><div class="welcome-count">${[1, 2, 3, 4].map(n => `<button type="button" data-wcount="${n}">${n}</button>`).join('')}</div></div><div id="wRows" style="display:grid;gap:8px"></div><p class="welcome-note">Not sure of your calories? Pick a goal and we'll fill in a typical number; you can change it any time in Household. This is a planning aid, not medical advice.</p><div class="welcome-actions"><button type="button" class="ghost-btn" id="wSkip">Skip for now</button><button type="button" class="primary-btn" id="wSave">Build my plan</button></div></div>`);
+  draw(body);
+  body.querySelectorAll('[data-wcount]').forEach(b => b.onclick = () => { count = Number(b.dataset.wcount); draw(body); });
+  const done = () => { store.set('sabiplate-welcomed', true); closeModal(); };
+  body.querySelector('#wSkip').onclick = done;
+  body.querySelector('#wSave').onclick = () => {
+    const list = [...body.querySelectorAll('[data-wp]')].map((r, i) => {
+      const goal = r.querySelector('[data-w="goal"]').value;
+      return { id: members[i]?.id || 'm' + Date.now() + i, name: r.querySelector('[data-w="name"]').value.trim() || (i === 0 ? 'Me' : 'Person ' + (i + 1)), goal, kcal: clamp(Number(r.querySelector('[data-w="kcal"]').value) || GOAL_KCAL[goal], MIN_KCAL, MAX_KCAL) };
+    });
+    saveMembers(list, 'Your plan is ready.');
+    done();
+  };
+}
+function maybeWelcome() {
+  if (store.get('sabiplate-welcomed', false)) return;
+  if (store.get('sabiplate-household-v1', null)) { store.set('sabiplate-welcomed', true); return; }
+  setTimeout(openWelcome, 400);
+}
+
 window.SABI_PLAN = {
   addRecipe, addDay, count: countMeals, shuffle,
   refreshRecipes: () => { for (const k of Object.keys(rmap)) delete rmap[k]; for (const r of recipes) rmap[r.id] = r; plan = cleanPlan(plan) || defaultPlan(); model = null; },
   getPlan: () => clonePlan(), setPlan: p => commitPlan(p), resetPlan: () => commitPlan(defaultPlan()),
   getMembers: () => JSON.parse(JSON.stringify(members)), setMembers: list => saveMembers(list),
-  model: () => buildModel(), shopRows, currentCosts, prepModel, solveDay, GROUP
+  model: () => buildModel(), openWelcome, shopRows, currentCosts, prepModel, solveDay, GROUP
 };
 const firstView = document.querySelector('.view.active')?.id?.replace('view-', '');
 if (firstView === 'home') { try { dbg.renderHome?.(); } catch {} }
 onView(firstView);
+maybeWelcome();
 })();

@@ -176,3 +176,48 @@
 }
 .ht-names{display:inline-flex;align-items:center;min-height:40px!important;padding:0 6px}
 .credits-link{display:inline-flex;align-items:center;min-height:40px}
+
+/* ---------- r11: nav, cookbook print, day tabs, welcome ---------- */
+#avatarBtn{display:none!important}
+.page-head-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.cb-section{font-family:Georgia,serif;color:var(--green);margin:18px 0 8px}
+.cb-section small{font-family:inherit;font-size:13px;color:var(--muted)}
+.cb-contents .feature{text-align:left;cursor:pointer;font:inherit;width:100%}
+.cb-print{display:none}
+@media print{
+  #view-cookbook.print-target .page-head,#view-cookbook.print-target .cookbook-layout .cb-contents .feature-list,#view-cookbook.print-target .nutrition-note{display:none!important}
+  #view-cookbook.print-target .cookbook-layout{display:block}
+  #view-cookbook.print-target .book-cover{display:block;max-width:420px;margin:0 auto 24px;page-break-after:always}
+  #view-cookbook.print-target .cb-section{display:none}
+  #view-cookbook.print-target .cb-print{display:block}
+  .cb-print-section>h2{font-family:Georgia,serif;font-size:28px;page-break-before:always}
+  .cb-recipe{page-break-inside:avoid;border-bottom:1px solid #ccc;padding:10px 0 14px}
+  .cb-recipe h3{font-family:Georgia,serif;font-size:18px;margin:0 0 2px}
+  .cb-meta{font-size:11px;color:#555;margin:0 0 6px}
+  .cb-intro{font-size:12px;margin:0 0 6px}
+  .cb-cols{display:grid;grid-template-columns:1fr 1.6fr;gap:16px;font-size:11px}
+  .cb-cols h4{margin:4px 0;font-size:12px}
+  .cb-cols ul,.cb-cols ol{margin:0;padding-left:16px}
+}
+.v15-day-tabs{display:none}
+@media(max-width:760px){
+  .v15-day-tabs{display:flex;gap:6px;overflow-x:auto;padding:2px 0 10px;margin:4px 0 6px;scrollbar-width:none}
+  .v15-day-tabs::-webkit-scrollbar{display:none}
+  .v15-day-tabs button{flex:0 0 auto;min-width:52px;min-height:52px;border-radius:14px;border:1px solid var(--line);background:#fff;font:inherit;color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;padding:4px 8px}
+  .v15-day-tabs button b{font-size:14px}
+  .v15-day-tabs button small{font-size:11px;color:var(--muted)}
+  .v15-day-tabs button.active{background:var(--green);border-color:var(--green);color:#fff}
+  .v15-day-tabs button.active small{color:#dfe9e2}
+  .v15-days .v15-day:not(.picked){display:none}
+}
+.welcome-form{display:grid;gap:14px}
+.welcome-count{display:flex;gap:8px;flex-wrap:wrap}
+.welcome-count button{min-width:52px;min-height:46px;border-radius:12px;border:1px solid var(--line);background:#fff;font:inherit;font-weight:700;color:var(--ink);cursor:pointer}
+.welcome-count button.active{background:var(--green);color:#fff;border-color:var(--green)}
+.welcome-person{display:grid;grid-template-columns:1.2fr 1fr .8fr;gap:8px;align-items:end;background:var(--soft);border-radius:14px;padding:12px}
+.welcome-person label{display:grid;gap:4px;font-size:12px;font-weight:700;color:var(--green)}
+.welcome-person input,.welcome-person select{min-height:44px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font:inherit;background:#fff}
+.welcome-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.welcome-note{font-size:12px;color:var(--muted);margin:0}
+@media(max-width:560px){.welcome-person{grid-template-columns:1fr 1fr}.welcome-person label:first-child{grid-column:1/-1}}
+.brand-logo{background:none!important;padding:0;display:block;object-fit:contain;border-radius:50%}
