@@ -278,3 +278,25 @@ details.safety summary::-webkit-details-marker{display:none}
 .mr-manual{margin:0 0 12px}
 .mr-manual summary{cursor:pointer;color:var(--green);font-weight:700;min-height:40px;display:flex;align-items:center}
 @media(max-width:560px){.mr-link-row{flex-direction:column;align-items:stretch}}
+
+/* ---------- r14: independent QA fixes ---------- */
+:root{--eyebrow:#9a4220;--muted:#545c56}
+.eyebrow{color:var(--eyebrow)!important;font-size:12px!important}
+.muted,.page-head p,.v15-sumline,.results-meta{color:var(--muted)}
+:focus-visible{outline:3px solid #1e6845!important;outline-offset:2px}
+.sp-tick{display:inline-flex;align-items:center;justify-content:center;min-width:40px;min-height:40px;cursor:pointer}
+.sp-tickhint{display:block;font-size:12px}
+.v15-plate details summary{min-height:40px;display:flex;align-items:center;cursor:pointer}
+.sp-find{min-height:40px!important}
+.sp-today{display:inline-block;background:var(--orange);color:#fff;font-family:Inter,system-ui,sans-serif;font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px;vertical-align:middle;margin-left:6px}
+.mr-manual summary::before{content:"▸";margin-right:8px;transition:transform .15s}
+.mr-manual[open] summary::before{transform:rotate(90deg)}
+.mr-manual summary{border:1px dashed var(--line);border-radius:12px;padding:0 12px;background:#fff}
+.recipe-extras h4{margin:8px 0 2px;color:var(--green);font-size:13px}
+.recipe-extras h4+p{margin-top:0}
+.servings button:disabled{opacity:.35;cursor:not-allowed}
+.welcome-count{flex-wrap:wrap}
+@media(max-width:760px){
+  .topbar .auth-create-btn,.topbar .auth-link-btn,.topbar .brand{min-height:40px}
+  #spModal .modal-close,#spModal .chooser-close{position:sticky;top:0}
+}

@@ -108,7 +108,18 @@ const ING_HEAD = /^(ingredients?|what you( wi|')ll need|you( wi|')ll need|for th
 function cleanLine(l) {
   return l.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu, ' ').replace(/^\s*(?:[-*•▪◦·>✓✔]|\d+[.)]\s(?=\D))\s*/, m => /\d/.test(m) ? m : '').replace(/\s+/g, ' ').trim();
 }
+// One-line social captions: put the title, servings and each ingredient on its own line.
+function normaliseCaption(text) {
+  let t = String(text || '');
+  if ((t.match(/\n/g) || []).length > 3) return t;
+  t = t.replace(/\s*\b(ingredients?|what you need|method|steps?|directions?|instructions?)\b\s*[:：-]\s*/gi, '\n$1\n')
+       .replace(/\s*[•▪●◦✅✔☑🔸🔹👉➡️➖]+\s*/gu, '\n')
+       .replace(/^([^\n:]{3,60}?)\s*\(?\b(serves|for)\s*(\d+)\b\)?\s*[:：-]\s*/i, '$1\nServes $3\n')
+       .replace(/^([^\n:]{3,60}?)\s*[:：]\s*(?=\d|½|¼|¾)/, '$1\n');
+  return t.split('\n').flatMap(l => l.split(/,\s*(?=\d|½|¼|¾|⅓|⅔|a |an |one |two |three )/i)).map(l => l.trim()).filter(Boolean).join('\n');
+}
 function parseCaption(text) {
+  text = normaliseCaption(text);
   const lines = String(text || '').split(/\r?\n|(?<=\.)\s+(?=\d+[.)]\s)/).map(cleanLine).filter(l => l && !/^#\w/.test(l) && !/^@\w+$/.test(l));
   const ingredients = [], steps = [];
   let mode = null, title = '';
@@ -213,7 +224,7 @@ function openEditor(existing) {
 }
 const foodOptions = sel => `<option value="" ${sel ? '' : 'selected'}>Choose a food…</option>` + FOOD_KEYS.map(k => `<option value="${k}" ${k === sel ? 'selected' : ''}>${esc(foodName(k))}</option>`).join('');
 function ingRows() {
-  if (!draft.ingredients.length) return '<p class="muted">No ingredients yet. Paste the recipe above and press “Read the recipe”, or add them one by one.</p>';
+  if (!draft.ingredients.length) return '<p class="muted">No ingredients yet. Paste a link above, or paste the recipe text, or add ingredients one by one.</p>';
   return draft.ingredients.map((i, n) => { const f = D.foods[i.key]; const kcal = f ? Math.round(f[0] * i.grams / 100) : 0; return `<div class="mr-ing ${!i.key || i.flag ? 'check' : ''}" data-row="${n}"><input class="mr-text" data-f="text" value="${esc(i.text)}" aria-label="Ingredient as written"><select data-f="key" aria-label="Matched food">${foodOptions(i.key)}</select><label class="mr-grams"><input data-f="grams" type="number" inputmode="decimal" min="0" step="5" value="${i.grams}" aria-label="Grams for the whole recipe"><span>g</span></label><span class="mr-kcal">${kcal} kcal</span><button type="button" class="mr-x" data-del="${n}" aria-label="Remove ingredient">×</button>${!i.key ? '<small class="mr-warn">Pick the closest food so calories can be worked out.</small>' : i.flag ? '<small class="mr-warn">Check the weight: no amount was given, so this is a guess.</small>' : ''}</div>`; }).join('');
 }
 function summary() {
@@ -280,7 +291,7 @@ function bindEditor(body) {
     const p = parseCaption(draft.caption);
     if (!p.ingredients.length) { toast('No ingredients found. Add them below, one per line works best.'); return; }
     draft.ingredients = p.ingredients; if (p.steps.length) draft.steps = p.steps; if (!draft.title && p.title) draft.title = p.title;
-    const s = draft.caption.match(/serves\s*(\d+)|(\d+)\s*(servings|portions|people)/i); if (s) draft.servings = Math.min(20, Number(s[1] || s[2]));
+    const s = draft.caption.match(/serves\s*(\d+)|for\s*(\d+)\s*(?:people|persons)|(\d+)\s*(servings|portions|people)/i); if (s) draft.servings = Math.min(20, Number(s[1] || s[2] || s[3]));
     drawEditor();
     const unsure = draft.ingredients.filter(i => !i.key || i.flag).length;
     const msg = `Found ${draft.ingredients.length} ingredients${unsure ? `; ${unsure} highlighted to check` : ''}.${pendingNote ? ' ' + pendingNote : ''}`;
