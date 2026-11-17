@@ -6,7 +6,7 @@ import sharp from 'sharp';
 const UA = 'SabiPlatePhotoPicker/1.0 (https://sabiplate.vercel.app; github.com/EvaIdugboe/sabiplate)';
 const queries = JSON.parse(await readFile('tools/photo-queries.json', 'utf8'));
 const only = process.env.ONLY ? new Set(process.env.ONLY.split(',')) : null;
-const PER_DISH = 6, TW = 240, TH = 180, LABEL = 22;
+const PER_DISH = Number(process.env.PER_DISH || 6), TW = 240, TH = 180, LABEL = 22;
 const okLicence = (s) => /^(cc0|public domain|pd|pdm|cc[ -]by([ -]sa)?)( |$|-\d)/i.test(String(s || '').trim()) && !/nc|nd/i.test(String(s));
 const strip = (s) => String(s || '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim().slice(0, 120);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -50,7 +50,7 @@ async function openverse(q) {
   return (j?.results || []).map((r) => ({ source: 'openverse:' + r.source, title: strip(r.title), page: r.foreign_landing_url, thumb: r.thumbnail || r.url, full: r.url,
     w: r.width || 0, h: r.height || 0, mime: 'image/jpeg', licence: ('cc-' + r.license + ' ' + (r.license_version || '')).replace('cc-cc0', 'cc0').replace('cc-pdm', 'pdm').trim(), artist: strip(r.creator) }));
 }
-const usable = (c) => c && /jpe?g/i.test(c.mime) && c.w >= 1000 && c.h >= 650 && c.w / c.h >= 0.95 && c.w / c.h <= 2.1 && okLicence(c.licence) && c.thumb;
+const usable = (c) => c && /jpe?g/i.test(c.mime) && c.w >= Number(process.env.MIN_W || 1000) && c.h >= Number(process.env.MIN_H || 650) && c.w / c.h >= 0.95 && c.w / c.h <= 2.1 && okLicence(c.licence) && c.thumb;
 
 await mkdir('candidates', { recursive: true });
 const result = {};
@@ -60,7 +60,7 @@ async function doDish(id, qs) {
   const add = (list) => { for (const c of list) { if (picked.length >= PER_DISH) break; if (!usable(c) || seen.has(c.full)) continue; seen.add(c.full); picked.push(c); } };
   try {
     for (const q of qs) { if (picked.length >= PER_DISH) break; add(await commons(q)); await sleep(150); }
-    if (picked.length < PER_DISH) { for (const q of qs.slice(0, 2)) { if (picked.length >= PER_DISH) break; add(await openverse(q)); await sleep(400); } }
+    if (picked.length < PER_DISH) { for (const q of qs.slice(0, Number(process.env.OV_QUERIES || 2))) { if (picked.length >= PER_DISH) break; add(await openverse(q)); await sleep(400); } }
   } catch (e) { console.log('search failed', id, String(e)); }
   const tiles = [];
   for (const c of picked) {

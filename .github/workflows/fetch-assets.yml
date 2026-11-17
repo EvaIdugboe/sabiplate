@@ -25,6 +25,7 @@ jobs:
           echo "stage: $STAGE"
           if [ "$STAGE" = "candidates" ]; then node tools/fetch-data.mjs || echo "data fetch failed"; node tools/fetch-photos.mjs; fi
           if [ "$STAGE" = "more" ]; then ONLY="$(cat tools/only.txt)" node tools/fetch-photos.mjs; fi
+          if [ "$STAGE" = "wide" ]; then ONLY="$(cat tools/only.txt)" PER_DISH=12 MIN_W=900 MIN_H=600 OV_QUERIES=6 node tools/fetch-photos.mjs; fi
           if [ "$STAGE" = "final" ]; then node tools/fetch-final.mjs; fi
       - name: Commit results
         run: |
