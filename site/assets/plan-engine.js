@@ -271,14 +271,41 @@ function plannerHtml() {
 }
 
 /* ---------- Shop view ---------- */
+const STORES = {
+  tesco: { name: 'Tesco', url: q => 'https://www.tesco.com/groceries/en-GB/search?query=' + encodeURIComponent(q) },
+  sainsburys: { name: "Sainsbury's", url: q => 'https://www.sainsburys.co.uk/gol-ui/SearchResults/' + encodeURIComponent(q) },
+  asda: { name: 'Asda', url: q => 'https://www.asda.com/groceries/search/' + encodeURIComponent(q) },
+  morrisons: { name: 'Morrisons', url: q => 'https://groceries.morrisons.com/search?q=' + encodeURIComponent(q) },
+  waitrose: { name: 'Waitrose', url: q => 'https://www.waitrose.com/ecom/shop/search?searchTerm=' + encodeURIComponent(q) },
+  ocado: { name: 'Ocado', url: q => 'https://www.ocado.com/search?entry=' + encodeURIComponent(q) }
+};
+let shopAt = shopAt0();
+function storeChoice(k) { if (STORES[k]) { shopAt = k; store.set('sabiplate-preferred-store', k); } }
+function shopAt0() { const v = (() => { try { return JSON.parse(localStorage.getItem('sabiplate-preferred-store') || '"tesco"'); } catch { return 'tesco'; } })(); return STORES[v] ? v : 'tesco'; }
+const searchTerm = name => name.replace(/\(.*?\)/g, '').split(/\s*\/\s*/)[0].replace(/\b(frozen recommended|for swallow|for eba)\b/gi, '').replace(/\s+/g, ' ').trim();
+function listText(rows) {
+  let cat = '', out = 'SabiPlate fortnight shop\n';
+  for (const r of rows) { if (have.has(r.key)) continue; if (r.category !== cat) { cat = r.category; out += `\n${cat}\n`; } out += `- ${r.name}: ${r.packs_first_shop} × ${fmtNeed(r.pack_size, r.unit)} (need ${r.needed_display})\n`; }
+  return out.trim();
+}
+async function copyList() {
+  const text = listText(shopRows());
+  try { await navigator.clipboard.writeText(text); toast('Shopping list copied'); }
+  catch { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); toast('Shopping list copied'); } catch { toast('Could not copy on this device'); } t.remove(); }
+}
+async function shareList() {
+  const text = listText(shopRows());
+  if (navigator.share) { try { await navigator.share({ title: 'SabiPlate shopping list', text }); } catch {} } else copyList();
+}
+
 function shoppingHtml() {
   const c = currentCosts(), rows = shopRows();
   if (!rows.length) return `<section class="v15-card"><span class="eyebrow">Fortnight shop</span><h2 style="font-family:Georgia,serif;color:var(--green);margin:5px 0">Nothing to buy yet.</h2><p class="muted">Add meals to the plan and the shop is worked out for you.</p></section>`;
   let cat = '';
-  return `<section class="v15-card"><span class="eyebrow">Fortnight shop</span><h2 style="font-family:Georgia,serif;color:var(--green);margin:5px 0">Shop twice a month, not every week.</h2><p class="muted">Quantities combine every plate for ${esc(namesList())} across the 14-day plan. Change a meal or a target and this list updates. Leftover packs carry into the second fortnight.</p><div class="v15-cost-grid"><div><strong>${money(c.first)}</strong><span>Fortnight shop 1</span></div><div><strong>${money(c.second)}</strong><span>Fortnight shop 2 restock</span></div><div><strong>${money(c.month)}</strong><span>28-day estimate</span></div><div><strong>${money(c.ppd)}</strong><span>per person per day</span></div></div><div class="v15-shop-controls"><b>${rows.length} items</b><button type="button" id="spClearHave" class="ghost-btn">Clear “already have”</button></div><div class="v15-shop-list">${rows.map(row => {
+  return `<section class="v15-card"><span class="eyebrow">Fortnight shop</span><h2 style="font-family:Georgia,serif;color:var(--green);margin:5px 0">Shop twice a month, not every week.</h2><p class="muted">Quantities combine every plate for ${esc(namesList())} across the 14-day plan. Change a meal or a target and this list updates. Leftover packs carry into the second fortnight.</p><div class="v15-cost-grid"><div><strong>${money(c.first)}</strong><span>Fortnight shop 1</span></div><div><strong>${money(c.second)}</strong><span>Fortnight shop 2 restock</span></div><div><strong>${money(c.month)}</strong><span>28-day estimate</span></div><div><strong>${money(c.ppd)}</strong><span>per person per day</span></div></div><div class="sp-store no-print"><label>Shop at <select id="spStore">${Object.entries(STORES).map(([k, v]) => `<option value="${k}" ${k === shopAt ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select></label><button type="button" class="ghost-btn" id="spCopy">Copy list</button><button type="button" class="ghost-btn" id="spShare">Share list</button></div><p class="muted sp-store-note no-print">Each item has a “Find at ${esc(STORES[shopAt].name)}” button that opens the search on their site, where you add your choice to your basket. Supermarkets don't yet let other apps fill your basket for you.</p><div class="v15-shop-controls"><b>${rows.length} items</b><button type="button" id="spClearHave" class="ghost-btn">Clear “already have”</button></div><div class="v15-shop-list">${rows.map(row => {
     const p = priceOverrides[row.key] ?? row.unit_price, line = row.packs_first_shop * p;
     const head = row.category !== cat ? `<h3 class="sp-cat">${esc(cat = row.category)}</h3>` : '';
-    return `${head}<div class="v15-shop-row ${have.has(row.key) ? 'have' : ''}"><input type="checkbox" data-sp-have="${row.key}" ${have.has(row.key) ? 'checked' : ''} aria-label="Already have ${esc(row.name)}"><span><b>${esc(row.name)}</b><small>Need ${esc(row.needed_display)}</small><small>${esc(row.storage)}</small></span><span class="v15-buy"><b>${row.packs_first_shop} × ${esc(fmtNeed(row.pack_size, row.unit))}</b><small>shop 1 · ${row.packs_second_shop} more for shop 2</small></span><span class="v15-linecost"><b>${money(line)}</b><small>shop 1</small></span><span class="v15-price"><small>£ / pack</small><input type="number" min="0" step=".01" value="${Number(p).toFixed(2)}" data-sp-price="${row.key}" aria-label="Price per pack for ${esc(row.name)}"></span></div>`;
+    return `${head}<div class="v15-shop-row ${have.has(row.key) ? 'have' : ''}"><input type="checkbox" data-sp-have="${row.key}" ${have.has(row.key) ? 'checked' : ''} aria-label="Already have ${esc(row.name)}"><span><b>${esc(row.name)}</b><small>Need ${esc(row.needed_display)}</small><small>${esc(row.storage)}</small></span><span class="v15-buy"><b>${row.packs_first_shop} × ${esc(fmtNeed(row.pack_size, row.unit))}</b><small>shop 1 · ${row.packs_second_shop} more for shop 2</small></span><span class="v15-linecost"><b>${money(line)}</b><small>shop 1</small></span><a class="sp-find no-print" href="${esc(STORES[shopAt].url(searchTerm(row.name)))}" target="_blank" rel="noopener">Find at ${esc(STORES[shopAt].name)}</a><span class="v15-price"><small>£ / pack</small><input type="number" min="0" step=".01" value="${Number(p).toFixed(2)}" data-sp-price="${row.key}" aria-label="Price per pack for ${esc(row.name)}"></span></div>`;
   }).join('')}</div><p class="shop-footnote">Tick “already have” for anything in your cupboard and it comes off the total. Prices are planning estimates you can edit; they vary by shop, butcher and African grocery. Seasonings, stock and spices are not listed: check your cupboard.</p></section>`;
 }
 
@@ -440,6 +467,9 @@ function injectShopping() {
   block.querySelectorAll('[data-sp-have]').forEach(x => x.onchange = () => { x.checked ? have.add(x.dataset.spHave) : have.delete(x.dataset.spHave); store.set('sabiplate-v15-have', [...have]); injectShopping(); injectHome(true); });
   block.querySelectorAll('[data-sp-price]').forEach(x => x.onchange = () => { priceOverrides[x.dataset.spPrice] = Math.max(0, Number(x.value) || 0); store.set('sabiplate-v15-price-overrides', priceOverrides); injectShopping(); });
   block.querySelector('#spClearHave')?.addEventListener('click', () => { have.clear(); store.set('sabiplate-v15-have', []); injectShopping(); });
+  block.querySelector('#spStore')?.addEventListener('change', e => { storeChoice(e.target.value); injectShopping(); });
+  block.querySelector('#spCopy')?.addEventListener('click', copyList);
+  block.querySelector('#spShare')?.addEventListener('click', shareList);
 }
 function injectPrep() {
   const v = document.querySelector('#view-prep'); if (!v) return;
@@ -493,6 +523,7 @@ function onView(name) {
 window.addEventListener('sabiplate:view-rendered', event => onView(event.detail?.name));
 window.SABI_PLAN = {
   addRecipe, addDay, count: countMeals, shuffle,
+  refreshRecipes: () => { for (const k of Object.keys(rmap)) delete rmap[k]; for (const r of recipes) rmap[r.id] = r; plan = cleanPlan(plan) || defaultPlan(); model = null; },
   getPlan: () => clonePlan(), setPlan: p => commitPlan(p), resetPlan: () => commitPlan(defaultPlan()),
   getMembers: () => JSON.parse(JSON.stringify(members)), setMembers: list => saveMembers(list),
   model: () => buildModel(), shopRows, currentCosts, prepModel, solveDay, GROUP

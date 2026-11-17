@@ -10,6 +10,7 @@ Live: https://sabiplate.vercel.app
   - `index.html` holds the base app (recipes, Build My Day, cookbook, profile, fridge search).
   - `assets/plan-engine.js` is the household plan: 14-day plan state, per-person portions, fortnight shop, prep plan.
   - `assets/plan-data.js` is generated; do not edit by hand.
+  - `assets/my-recipes.js` is My Recipes: add a recipe or paste a post's caption; ingredients are read with simple rules in the browser (no AI service), matched to the food table, reviewed, then saved under `sabiplate-my-recipes-v1` (synced with the account).
   - `assets/plan.css`, `assets/recipes/*.webp`, cover art, and the bundled Supabase auth script.
 - `data/` is the recipe master pulled from Supabase (`recipes`, `recipe_ingredients`) plus the food table and the starter plan.
 - `tools/`

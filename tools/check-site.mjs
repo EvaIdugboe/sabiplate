@@ -6,7 +6,7 @@ const html = await readFile('site/index.html', 'utf8');
 if (html.includes('MutationObserver')) fail('MutationObserver found in index.html');
 if (/NAIJA|Body Transformation/.test(html)) fail('old cookbook branding found');
 for (const m of html.matchAll(/<script(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/g)) { try { new vm.Script(m[1]); } catch (e) { fail('inline script syntax: ' + e.message); } }
-for (const f of ['site/assets/plan-engine.js', 'site/assets/plan-data.js', 'site/assets/auth-sync.bundle.js']) { try { new vm.Script(await readFile(f, 'utf8')); } catch (e) { fail(f + ': ' + e.message); } }
+for (const f of ['site/assets/plan-engine.js', 'site/assets/plan-data.js', 'site/assets/auth-sync.bundle.js', 'site/assets/my-recipes.js', 'site/assets/photo-credits.js']) { try { new vm.Script(await readFile(f, 'utf8')); } catch (e) { fail(f + ': ' + e.message); } }
 const ctx = { window: {} }; vm.runInNewContext(await readFile('site/assets/plan-data.js', 'utf8'), ctx);
 const D = ctx.window.SABI_PLAN_DATA;
 if (!D || D.defaultPlan.length !== 14) fail('plan data missing or default plan is not 14 days');
