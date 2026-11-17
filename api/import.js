@@ -88,8 +88,11 @@ module.exports = async (req, res) => {
   try {
     if (kind === 'tiktok') {
       const r = await get('https://www.tiktok.com/oembed?url=' + encodeURIComponent(target.href));
-      if (r.status === 200) { const j = JSON.parse(r.text); if (j.title) return send(200, { ok: true, kind, text: socialToLines(j.title), author: j.author_name || '', note: 'Read from the TikTok caption.' }); }
-      return send(200, { ok: false, kind, message: 'TikTok didn’t share this post’s caption. Open the post, copy the caption and paste it below.' });
+      if (r.status === 200) { try { const j = JSON.parse(r.text); if (j.title) return send(200, { ok: true, kind, text: socialToLines(j.title), author: j.author_name || '', note: 'Read from the TikTok caption.' }); } catch {} }
+      const pg = await get(target.href, UA_PREVIEW).catch(() => null);
+      const d = pg ? (meta(pg.text, 'og:description') || meta(pg.text, 'description')) : '';
+      if (d && d.length > 30) return send(200, { ok: true, kind, text: socialToLines(d), note: 'Read from the TikTok caption.' });
+      return send(200, { ok: false, kind, detail: `oembed ${r.status}`, message: 'TikTok didn’t share this post’s caption. Open the post, copy the caption and paste it below.' });
     }
     if (kind === 'youtube') {
       const r = await get(target.href);
