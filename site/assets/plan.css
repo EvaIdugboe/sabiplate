@@ -97,3 +97,4 @@
   .mr-photo{grid-template-columns:100px 1fr}
   .mr-photo img{width:100px;height:75px}
 }
+#mainContent:focus,#mainContent:focus-visible{outline:none}
