@@ -221,3 +221,52 @@
 .welcome-note{font-size:12px;color:var(--muted);margin:0}
 @media(max-width:560px){.welcome-person{grid-template-columns:1fr 1fr}.welcome-person label:first-child{grid-column:1/-1}}
 .brand-logo{background:none!important;padding:0;display:block;object-fit:contain;border-radius:50%}
+
+/* ---------- r12: detail review ---------- */
+.img-open{display:block;width:100%;height:100%;padding:0;border:0;background:none;cursor:pointer}
+.img-open img{width:100%;height:100%;object-fit:cover;display:block}
+.title-open,.sp-title{border:0;background:none;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer;min-height:0}
+.title-open:hover,.sp-title:hover{text-decoration:underline;text-underline-offset:3px}
+.recipe-card .card-actions{grid-template-columns:1fr!important;display:grid}
+.recipe-card .card-actions .add-plan{width:100%}
+.fav-chip[aria-pressed="true"]{background:var(--green);color:#fff;border-color:var(--green)}
+.in-plan{font-size:13px;margin:8px 0 0}
+.tick-help{font-size:12px;margin:-6px 0 8px}
+.exact-weight{display:inline!important;color:var(--muted);font-size:12px}
+.sp-chip{display:inline-block;margin-top:6px;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700}
+.sp-chip.on{background:#e3efe6;color:#1e6845}
+.sp-chip.off{background:#f6e2d8;color:#97401f}
+.v15-sumline{color:var(--muted);font-size:14px;margin:4px 0 12px}
+.sp-remove{border:0!important;background:none!important;color:var(--muted)!important;text-decoration:underline;text-underline-offset:3px;font-weight:600;min-height:40px;padding:0 8px;cursor:pointer}
+.v15-gallery button{min-height:0}
+.v15-gallery img{height:110px!important}
+.sp-extras{margin-top:18px}
+.sp-extra-row{display:grid;grid-template-columns:32px 1fr auto;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:6px 10px}
+.sp-extra-row.have span{text-decoration:line-through;opacity:.6}
+.sp-extra-row input[type=checkbox]{width:22px;height:22px;accent-color:var(--green)}
+.sp-extra-add{display:flex;gap:8px;margin-top:8px}
+.sp-extra-add input{flex:1;min-height:44px;border:1px solid var(--line);border-radius:12px;padding:0 12px;font:inherit;background:#fff}
+details.safety summary{cursor:pointer;list-style:none;min-height:40px;display:flex;align-items:center}
+details.safety summary::-webkit-details-marker{display:none}
+.chooser-item{display:grid!important;grid-template-columns:56px 1fr auto!important;align-items:center;gap:10px}
+.chooser-item button{min-height:40px}
+.sp-daygrid button[aria-pressed="true"],.sp-daygrid button.on{outline:2px solid var(--green);outline-offset:-2px}
+@media(max-width:600px){
+  .sp-daygrid{grid-template-columns:1fr 1fr!important}
+  .sp-daygrid button{min-height:52px;text-align:left}
+  .sp-daygrid button b{font-size:15px}
+  .sp-daygrid button small{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+  .sp-store{display:grid!important;grid-template-columns:1fr 1fr;gap:8px}
+  .sp-store label{grid-column:1/-1;display:flex;align-items:center;gap:8px}
+  .sp-store label select{flex:1}
+  .v15-gallery img{height:96px!important}
+  .recipe-card-body{padding:14px!important}
+}
+.sp-daygrid button.active b::after{content:" ✓"}
+.recipe-intro{font-size:16px;line-height:1.55;color:var(--ink);margin:0 0 14px}
+.recipe-extras{margin-top:16px;background:var(--soft);border-radius:14px;padding:12px 16px;font-size:14px}
+.recipe-extras p{margin:6px 0}
+.recipe-extras b{color:var(--green);display:block;font-size:13px}
+.recipe-extras ul{margin:2px 0 4px;padding-left:18px}
+.title-open,.sp-title{min-height:40px;display:inline-flex;align-items:center}
+.v15-meal-title .sp-title{font-weight:800;color:var(--green);font-size:15px;line-height:1.25}
