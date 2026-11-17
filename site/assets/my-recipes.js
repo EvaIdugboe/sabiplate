@@ -205,6 +205,7 @@ function ensureModal() {
 function closeModal() { modal?.classList.remove('open'); modal?.setAttribute('aria-hidden', 'true'); document.body.style.overflow = ''; }
 let draft = null;
 function blank() { return { id: '', title: '', category: 'Dinner', cuisine: 'Nigerian', servings: 2, prep: 30, sourceUrl: '', caption: '', photo: '', ingredients: [], steps: [] }; }
+let pendingNote = '';
 function openEditor(existing) {
   draft = existing ? JSON.parse(JSON.stringify(existing)) : blank();
   ensureModal(); modal.classList.add('open'); modal.setAttribute('aria-hidden', 'false'); document.body.style.overflow = 'hidden';
@@ -222,10 +223,12 @@ function summary() {
 function drawEditor() {
   const body = modal.querySelector('#mrBody');
   body.innerHTML = `<span class="eyebrow">My Recipes</span><h2 id="mrTitle" style="font-family:Georgia,serif;color:var(--green);margin:4px 0 6px">${draft.id ? 'Edit your recipe' : 'Add a recipe'}</h2>
-  <p class="muted" style="margin-top:0">Saw a recipe on Instagram, TikTok or a website? Paste the link, then copy the caption into the box. SabiPlate reads the ingredients and works out the calories. You check everything before saving.</p>
-  <label class="mr-label">Link to the post (optional)<input id="mrUrl" type="url" inputmode="url" placeholder="https://www.instagram.com/p/…" value="${esc(draft.sourceUrl)}"></label>
-  <label class="mr-label">Recipe text or caption<textarea id="mrCaption" rows="7" placeholder="Paste the caption here. In Instagram, tap the caption, then … → Copy, or press and hold the text.">${esc(draft.caption)}</textarea></label>
-  <button type="button" class="secondary-btn" id="mrRead">Read the recipe</button>
+  <p class="muted" style="margin-top:0">Paste a link to a recipe website, TikTok, YouTube or Instagram post. SabiPlate fills in the ingredients and works out the calories, and you check them before saving.</p>
+  <div class="mr-link-row"><label class="mr-label" style="flex:1">Link to the recipe<input id="mrUrl" type="url" inputmode="url" placeholder="Paste a link, e.g. https://www.tiktok.com/@…" value="${esc(draft.sourceUrl)}"></label><button type="button" class="primary-btn" id="mrFetch">Get recipe</button></div>
+  <p class="mr-status" id="mrStatus" role="status" aria-live="polite"></p>
+  <details class="mr-manual" ${draft.caption ? 'open' : ''}><summary>Or paste the recipe text yourself</summary>
+  <label class="mr-label">Recipe text or caption<textarea id="mrCaption" rows="6" placeholder="Paste the ingredients and steps here, one per line works best.">${esc(draft.caption)}</textarea></label>
+  <button type="button" class="secondary-btn" id="mrRead">Read the recipe</button></details>
   <div class="mr-grid"><label class="mr-label">Recipe name<input id="mrName" value="${esc(draft.title)}" maxlength="70" placeholder="e.g. Chicken suya rice bowl"></label>
   <label class="mr-label">Meal<select id="mrCat">${CATS.map(c => `<option ${draft.category === c ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
   <label class="mr-label">Cuisine<select id="mrCuisine">${CUISINES.map(c => `<option ${draft.cuisine === c ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
@@ -251,6 +254,26 @@ function syncFields(body) {
 }
 function bindEditor(body) {
   const refresh = () => { body.querySelector('#mrIngs').innerHTML = ingRows(); body.querySelector('#mrSummary').innerHTML = summary(); };
+  const status = (msg, kind) => { const el = body.querySelector('#mrStatus'); if (el) { el.textContent = msg || ''; el.className = 'mr-status ' + (kind || ''); } };
+  const fetchLink = async () => {
+    const url = body.querySelector('#mrUrl').value.trim();
+    if (!url) { status('Paste a link first.', 'warn'); body.querySelector('#mrUrl').focus(); return; }
+    const btn = body.querySelector('#mrFetch'); btn.disabled = true; btn.textContent = 'Getting recipe…'; status('Reading the link…');
+    let j;
+    try { const r = await fetch('/api/import?url=' + encodeURIComponent(url)); j = await r.json(); }
+    catch { j = { ok: false, message: 'Couldn’t reach SabiPlate’s link reader. Check your connection, or paste the recipe text below.' }; }
+    btn.disabled = false; btn.textContent = 'Get recipe';
+    if (!j.ok) { status(j.message, 'warn'); const d = body.querySelector('.mr-manual'); if (d) d.open = true; body.querySelector('#mrCaption')?.focus(); return; }
+    body.querySelector('#mrCaption').value = j.text;
+    if (j.title && !body.querySelector('#mrName').value.trim()) body.querySelector('#mrName').value = j.title.slice(0, 70);
+    if (j.minutes) body.querySelector('#mrPrep').value = Math.min(600, j.minutes);
+    if (j.servings) body.querySelector('#mrServ').value = Math.min(20, j.servings);
+    pendingNote = j.note || '';
+    body.querySelector('#mrRead').click();
+  };
+  body.querySelector('#mrFetch').onclick = fetchLink;
+  body.querySelector('#mrUrl').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); fetchLink(); } });
+  body.querySelector('#mrUrl').addEventListener('paste', () => setTimeout(() => { const v = body.querySelector('#mrUrl').value.trim(); if (/^https?:\/\//.test(v)) fetchLink(); }, 50));
   body.querySelector('#mrRead').onclick = () => {
     syncFields(body);
     if (!draft.caption.trim()) { toast('Paste the recipe text first'); return; }
@@ -260,7 +283,10 @@ function bindEditor(body) {
     const s = draft.caption.match(/serves\s*(\d+)|(\d+)\s*(servings|portions|people)/i); if (s) draft.servings = Math.min(20, Number(s[1] || s[2]));
     drawEditor();
     const unsure = draft.ingredients.filter(i => !i.key || i.flag).length;
-    toast(`Found ${draft.ingredients.length} ingredients${unsure ? `; ${unsure} to check` : ''}`);
+    const msg = `Found ${draft.ingredients.length} ingredients${unsure ? `; ${unsure} highlighted to check` : ''}.${pendingNote ? ' ' + pendingNote : ''}`;
+    pendingNote = '';
+    const st = modal.querySelector('#mrStatus'); if (st) { st.textContent = msg; st.className = 'mr-status ok'; }
+    toast(`Found ${draft.ingredients.length} ingredients`);
   };
   body.querySelector('#mrIngs').addEventListener('input', e => {
     const row = e.target.closest('[data-row]'); if (!row) return; const i = draft.ingredients[+row.dataset.row], f = e.target.dataset.f;

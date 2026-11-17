@@ -270,3 +270,11 @@ details.safety summary::-webkit-details-marker{display:none}
 .recipe-extras ul{margin:2px 0 4px;padding-left:18px}
 .title-open,.sp-title{min-height:40px;display:inline-flex;align-items:center}
 .v15-meal-title .sp-title{font-weight:800;color:var(--green);font-size:15px;line-height:1.25}
+.mr-link-row{display:flex;gap:8px;align-items:flex-end}
+.mr-link-row .primary-btn{min-height:46px;white-space:nowrap}
+.mr-status{min-height:1.2em;font-size:13px;margin:6px 0 10px;color:var(--muted)}
+.mr-status.warn{color:#97401f}
+.mr-status.ok{color:#1e6845}
+.mr-manual{margin:0 0 12px}
+.mr-manual summary{cursor:pointer;color:var(--green);font-weight:700;min-height:40px;display:flex;align-items:center}
+@media(max-width:560px){.mr-link-row{flex-direction:column;align-items:stretch}}
