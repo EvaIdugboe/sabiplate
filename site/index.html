@@ -5,7 +5,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
-<meta content="#123f2a" name="theme-color"/>
+<meta content="#123f2a" name="theme-color"/><link rel="icon" href="./favicon.svg" type="image/svg+xml">
 <meta content="SabiPlate helps you plan familiar Nigerian and global meals around your nutrition goals." name="description"/>
 <title>FULL V15 · SabiPlate Live Beta · v15 v11 · Food Images Corrected | SabiPlate | Mobile Optimised Couple Meal Planner</title>
 <style>:root{
@@ -488,20 +488,12 @@ main{max-width:1320px;margin:0 auto}.view{display:none;padding:24px}.view.active
   function swapGenerated(slot){ensureGenerated();const locked={};SLOTS.filter(s=>s!==slot).forEach(s=>locked[s]=state.generatedDay[s].id);state.generatedDay=buildDay(+state.profile.target||1750,{locked,exclude:{[slot]:state.generatedDay[slot].id},randomise:true});renderHome();toast(`${slot} swapped`)}
 
   function renderHome(){
-    const el=$('#view-home');ensureGenerated();const g=state.generatedDay;const target=+state.profile.target||1750;const fav=recipes.filter(r=>state.favourites.has(r.id)).slice(0,4);const featured=fav.length?fav:recipes.slice(0,4);
-    const nigerian=recipes.filter(r=>/nigerian/i.test(r.cuisine+' '+r.tags.join(' '))).slice(0,3);const high=recipes.filter(r=>r.protein>=38).sort((a,b)=>b.protein-a.protein).slice(0,3);const quick=recipes.filter(r=>r.prep<=20).sort((a,b)=>a.prep-b.prep).slice(0,3);
-    el.innerHTML=`<section class="hero"><div class="hero-copy"><span class="eyebrow">Nigerian + global food • smarter planning</span><h1 id="homeHeading">Know your food.<em>Own your goals.</em></h1><p>Plan satisfying meals around your goals without giving up the food you actually enjoy.</p><div class="hero-actions"><button type="button" class="primary-btn" data-home-action="build">Build my day</button><button type="button" class="secondary-btn" data-nav-local="recipes">Browse recipes</button></div></div><div class="hero-visual" style="background-image:url('${esc('./assets/hero-wide.jpg?v=r7')}')"></div></section>
-      <div class="stats-grid"><div class="stat-card"><strong>${recipes.length}</strong><span>recipes</span></div><div class="stat-card"><strong>${target}</strong><span>daily kcal target</span></div><div class="stat-card"><strong>${state.favourites.size}</strong><span>favourites</span></div><div class="stat-card"><strong>${planCount()}</strong><span>planned meals</span></div></div>
-      <section class="section"><div class="section-head"><div><span class="eyebrow">Choose a moment</span><h2>What are we eating today?</h2></div></div><div class="category-grid">${homeCategory('Breakfast','Power Breakfasts')}${homeCategory('Lunch','Power Lunches')}${homeCategory('Dinner','Power Dinners')}${homeCategory('Snack','Power Snacks')}</div></section>
-      <section class="section quick-builder" id="builder"><div><span class="eyebrow">Build My Day</span><h3>Plan around your target</h3><p class="muted">Choose a calorie target, lock meals you like and regenerate or swap the rest. This is a planning aid, not medical advice.</p><div class="target-pills">${[1400,1500,1750,1800,2000].map(x=>`<button type="button" data-target="${x}" class="${target===x?'active':''}">${x} kcal</button>`).join('')}</div><div class="custom-target"><input id="customTarget" type="number" min="1000" max="4000" step="50" value="${target}" aria-label="Custom calorie target"><button type="button" class="ghost-btn" id="applyTarget">Use target</button></div><button type="button" class="primary-btn" id="regenerateDay">Regenerate unlocked meals</button></div>
-      <div class="builder-result"><div class="builder-head"><div><h4>${g.total} kcal • ${g.protein}g protein</h4><div class="builder-status">Target ${target} kcal • ${generatedDelta(g,target)}</div></div></div><div class="generated-meals">${SLOTS.map(s=>`<div class="generated-meal"><div><b>${s}: ${esc(g[s].title)}</b><small>${g[s].calories} kcal • ${g[s].protein}g protein</small></div><div class="generated-actions"><button type="button" data-builder-view="${g[s].id}">View</button><button type="button" data-builder-swap="${s}" ${state.builderLocks.has(s)?'disabled':''}>Swap</button><button type="button" data-builder-lock="${s}" class="${state.builderLocks.has(s)?'locked':''}">${state.builderLocks.has(s)?'Locked':'Lock'}</button></div></div>`).join('')}</div><div class="builder-footer"><select id="builderDay" aria-label="Day to add plan" hidden><option>Monday</option></select><button type="button" class="secondary-btn" id="useGeneratedDay">Add this day to my plan</button></div></div></section>
-      <section class="section"><div class="section-head"><div><span class="eyebrow">Discover</span><h2>Useful picks</h2></div></div><div class="discovery-grid">${discoveryCard('Nigerian favourites',nigerian)}${discoveryCard('Higher protein',high)}${discoveryCard('Quick meals',quick)}</div></section>
-      <section class="section"><div class="section-head"><div><span class="eyebrow">Your picks</span><h2>${fav.length?'Saved favourites':'Start here'}</h2></div><button type="button" class="ghost-btn" data-nav-local="recipes">See all recipes</button></div><div class="recipe-grid">${featured.map(recipeCard).join('')}</div></section>`;
+    const el=$('#view-home');const fav=recipes.filter(r=>state.favourites.has(r.id)).slice(0,4);
+    el.innerHTML=`<section class="hero hero-simple"><div class="hero-copy"><h1 id="homeHeading">Know your food.<em>Own your goals.</em></h1><p>Nigerian and global meals, portioned for everyone at your table.</p><div class="hero-actions"><button type="button" class="primary-btn" data-nav-local="planner">Open my plan</button><button type="button" class="secondary-btn" data-nav-local="recipes">Browse recipes</button></div></div><div class="hero-visual" style="background-image:url('${esc('./assets/hero-wide.jpg?v=r7')}')"></div></section>
+      <div id="homeToday"></div>
+      <section class="section home-browse"><div class="section-head"><h2>Browse by meal</h2><button type="button" class="ghost-btn" data-nav-local="recipes">All ${recipes.length} recipes</button></div><div class="category-grid">${homeCategory('Breakfast','Breakfast')}${homeCategory('Lunch','Lunch')}${homeCategory('Dinner','Dinner')}${homeCategory('Snack','Snacks')}</div></section>
+      ${fav.length?`<section class="section"><div class="section-head"><h2>Your favourites</h2></div><div class="recipe-grid">${fav.map(recipeCard).join('')}</div></section>`:''}`;
     bindRecipeActions(el);$$('[data-cat]',el).forEach(b=>b.onclick=()=>{state.filter.category=b.dataset.cat;nav('recipes')});$$('[data-nav-local]',el).forEach(b=>b.onclick=()=>nav(b.dataset.navLocal));
-    $$('[data-target]',el).forEach(b=>b.onclick=()=>setTarget(+b.dataset.target));$('#applyTarget').onclick=()=>setTarget(+$(' #customTarget')?.value||target);
-    $('#regenerateDay').onclick=regenerateBuilder;$('[data-home-action="build"]').onclick=()=>$('#builder').scrollIntoView({behavior:'smooth'});
-    $$('[data-builder-view]',el).forEach(b=>b.onclick=()=>openRecipe(b.dataset.builderView));$$('[data-builder-swap]',el).forEach(b=>b.onclick=()=>swapGenerated(b.dataset.builderSwap));$$('[data-builder-lock]',el).forEach(b=>b.onclick=()=>{const s=b.dataset.builderLock;state.builderLocks.has(s)?state.builderLocks.delete(s):state.builderLocks.add(s);renderHome()});
-    $('#builderDay').onchange=e=>state.builderDay=e.target.value;$('#useGeneratedDay').onclick=()=>{if(window.SABI_PLAN?.addDay){window.SABI_PLAN.addDay(Object.fromEntries(SLOTS.map(s=>[s,g[s].id])));return}SLOTS.forEach(s=>state.plan[state.builderDay][s]=g[s].id);save();toast(`${state.builderDay} added to your planner`)};
   }
   function discoveryCard(title,list){return `<div class="discovery-card"><h3>${esc(title)}</h3><div class="mini-list">${list.map(r=>`<button type="button" class="mini-recipe" data-open="${r.id}"><img src="${esc(r.image)}" data-fallback="${esc(r.imageFallback||'')}" onerror="this.onerror=null;if(this.dataset.fallback){this.src=this.dataset.fallback}" alt=""><span><b>${esc(r.title)}</b><small>${r.calories} kcal • ${r.protein}g</small></span></button>`).join('')}</div></div>`}
   function setTarget(n){n=Math.max(1000,Math.min(4000,Math.round(n/10)*10));state.profile.target=n;state.builderLocks.clear();state.generatedDay=buildDay(n,{randomise:true});save();renderHome()}
@@ -646,11 +638,11 @@ main{max-width:1320px;margin:0 auto}.view{display:none;padding:24px}.view.active
 @media(max-width:360px){.v15-plates{grid-template-columns:1fr}.v15-summary,.v15-cost-grid{grid-template-columns:1fr 1fr}.v15-gallery button{min-width:88%}}
 </style>
 
-<link rel="stylesheet" href="./assets/plan.css?v=r8">
+<link rel="stylesheet" href="./assets/plan.css?v=r9">
 <script src="./assets/photo-credits.js?v=r5"></script>
 <script src="./assets/plan-data.js?v=20261117-r2" defer></script>
 <script src="./assets/my-recipes.js?v=r6" defer></script>
-<script src="./assets/plan-engine.js?v=r6" defer></script>
+<script src="./assets/plan-engine.js?v=r8" defer></script>
 
 <script src="./assets/auth-sync.bundle.js?v=20260821-auth3" defer></script>
 <!-- Hosted parity build: actual SabiPlate v15 prototype -->

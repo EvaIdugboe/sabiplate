@@ -98,3 +98,40 @@
   .mr-photo img{width:100px;height:75px}
 }
 #mainContent:focus,#mainContent:focus-visible{outline:none}
+
+/* ---------- Simplified home (r9) ---------- */
+.hero-simple .hero-copy h1{margin-top:0}
+.home-today{background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:22px;margin:18px 0}
+.ht-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.ht-head h2{font-family:Georgia,serif;color:var(--green);margin:4px 0 2px;font-size:28px}
+.ht-head p{margin:0;color:var(--muted);font-size:14px}
+.ht-meals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}
+.ht-meal{display:flex;flex-direction:column;text-align:left;border:1px solid var(--line);background:#fff;border-radius:16px;padding:0;overflow:hidden;cursor:pointer;font:inherit;color:var(--ink)}
+.ht-meal:hover{border-color:var(--green2)}
+.ht-img{display:block;aspect-ratio:4/3;background:var(--soft);overflow:hidden}
+.ht-img img{width:100%;height:100%;object-fit:cover;display:block}
+.ht-txt{display:flex;flex-direction:column;gap:2px;padding:10px 12px 12px}
+.ht-txt em{font-style:normal;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--orange);font-weight:700}
+.ht-txt b{font-size:14px;line-height:1.3}
+.ht-empty .ht-txt b{color:var(--muted)}
+.ht-links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px}
+.ht-links button{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;background:var(--soft);border:0;border-radius:14px;padding:14px 16px;cursor:pointer;font:inherit;color:var(--ink);min-height:64px}
+.ht-links button:hover{background:var(--line)}
+.ht-links b{color:var(--green);font-size:15px}
+.ht-links span{color:var(--muted);font-size:13px}
+.home-browse .section-head{align-items:center}
+.home-browse .category-card{min-height:150px}
+@media(max-width:760px){
+  .home-today{padding:16px;border-radius:20px;margin:14px 0}
+  .ht-head h2{font-size:23px}
+  .ht-head .ghost-btn{display:none}
+  .ht-meals{display:flex;flex-direction:column;gap:8px}
+  .ht-meal{flex-direction:row;align-items:center;border-radius:14px}
+  .ht-img{width:84px;min-width:84px;aspect-ratio:1/1}
+  .ht-links{grid-template-columns:1fr;gap:8px}
+  .ht-links button{min-height:56px;padding:12px 14px}
+  #view-home .home-browse .category-grid{display:grid!important;grid-template-columns:1fr 1fr!important;overflow:visible!important;gap:10px!important}
+  #view-home .home-browse .category-card{flex:none!important;min-width:0!important;min-height:110px!important}
+  #view-home .home-browse .category-card b{font-size:18px!important}
+  .home-browse .section-head .ghost-btn{display:inline-flex}
+}

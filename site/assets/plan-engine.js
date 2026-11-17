@@ -495,15 +495,39 @@ function injectProfile() {
   block.querySelector('#spAddMember')?.addEventListener('click', () => saveMembers([...readMembers(block), { id: 'm' + Date.now(), name: 'Person ' + (members.length + 1), goal: 'maintain', kcal: GOAL_KCAL.maintain }], 'Person added'));
   block.querySelectorAll('[data-hh-remove]').forEach(b => b.onclick = () => { const list = readMembers(block); list.splice(Number(b.dataset.hhRemove), 1); saveMembers(list, 'Person removed'); });
 }
+function todayIndex(d = new Date()) {
+  const dow = (d.getDay() + 6) % 7;
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  t.setUTCDate(t.getUTCDate() + 3 - dow);
+  const y = new Date(Date.UTC(t.getUTCFullYear(), 0, 4));
+  const week = 1 + Math.round(((t - y) / 864e5 - 3 + ((y.getUTCDay() + 6) % 7)) / 7);
+  return (week % 2) * 7 + dow;
+}
 function injectHome(force) {
   const v = document.querySelector('#view-home'); if (!v) return;
   if (v.querySelector('#spHome') && !force) return;
   v.querySelector('#spHome')?.remove();
-  const c = currentCosts();
-  const card = document.createElement('section'); card.id = 'spHome'; card.className = 'v15-card v15-hero';
-  card.innerHTML = `<span class="eyebrow">${planWord()} · 14 days</span><h2>${headline()} One shop every two weeks.</h2><p>${members.map(m => `${esc(m.name)} ${m.kcal.toLocaleString('en-GB')} kcal`).join(' · ')}. ${countMeals()} meals planned, about ${money(c.first)} for the first shop.</p><button type="button" id="spHomeGo" class="primary-btn">Open ${members.length > 1 ? 'our' : 'my'} 14-day plan</button>`;
-  v.querySelector('.hero')?.after(card);
-  card.querySelector('#spHomeGo').onclick = () => dbg.nav('planner');
+  const c = currentCosts(), di = todayIndex(), day = plan.days[di] || {};
+  const who = members.map(m => `${esc(m.name)} ${m.kcal.toLocaleString('en-GB')} kcal`).join(' · ');
+  const meals = SLOTS.map(s => {
+    const e = day[s], r = e && rmap[e.id];
+    if (!r) return `<button type="button" class="ht-meal ht-empty" data-ht-add="${s}"><span class="ht-img"></span><span class="ht-txt"><em>${s}</em><b>Add a meal</b></span></button>`;
+    return `<button type="button" class="ht-meal" data-sp-view="${esc(e.id)}"><span class="ht-img"><img src="${esc(r.image)}" alt="" loading="lazy"></span><span class="ht-txt"><em>${s}</em><b>${esc(r.title)}</b></span></button>`;
+  }).join('');
+  const card = document.createElement('section'); card.id = 'spHome'; card.className = 'home-today';
+  card.innerHTML = `<div class="ht-head"><div><span class="eyebrow">Today · ${dayLabel(di)}</span><h2>Today's meals</h2><p>${who}</p></div><button type="button" class="ghost-btn" data-ht-go="planner">See full plan</button></div>
+    <div class="ht-meals">${meals}</div>
+    <div class="ht-links">
+      <button type="button" data-ht-go="planner"><b>14-day plan</b><span>${countMeals()} meals · portions for ${members.length === 1 ? 'you' : members.length + ' people'}</span></button>
+      <button type="button" data-ht-go="shopping"><b>Shopping list</b><span>About ${money(c.first)} for the first shop</span></button>
+      <button type="button" data-ht-go="prep"><b>Meal prep</b><span>Batch-cook plan for the fortnight</span></button>
+    </div>`;
+  const slot = v.querySelector('#homeToday');
+  if (slot) slot.replaceWith(card); else v.querySelector('.hero')?.after(card);
+  card.addEventListener('click', e => {
+    const view = e.target.closest('[data-sp-view]'); if (view) { dbg.openRecipe?.(view.dataset.spView); return; }
+    const go = e.target.closest('[data-ht-go],[data-ht-add]'); if (go) dbg.nav(go.dataset.htGo || 'planner');
+  });
 }
 function renderAll() {
   const active = document.querySelector('.view.active')?.id;
