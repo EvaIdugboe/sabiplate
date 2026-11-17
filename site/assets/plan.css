@@ -135,3 +135,44 @@
   #view-home .home-browse .category-card b{font-size:18px!important}
   .home-browse .section-head .ghost-btn{display:inline-flex}
 }
+
+/* ---------- Hero photos without the green fade (r10) ---------- */
+.hero-simple .hero-visual:after{display:none!important;content:none!important}
+.hero-simple .hero-visual{margin:16px 16px 16px 0;border-radius:22px;min-height:0!important;background-position:center;background-size:cover}
+@media(max-width:760px){
+  .hero-simple .hero-visual{margin:0 14px 14px!important;border-radius:16px;min-height:170px!important;aspect-ratio:4/3}
+}
+
+/* ---------- Site-wide review fixes (r10) ---------- */
+.v15-h1{font-family:Georgia,serif;color:var(--green);margin:5px 0 6px;font-size:clamp(28px,4vw,40px);line-height:1.1}
+#view-shopping > .page-head{display:none}
+.v15-shop-list:not(.edit-prices) .v15-price{display:none}
+.v15-shop-row{grid-template-columns:32px minmax(180px,2fr) 120px 100px 130px}
+.v15-shop-list.edit-prices .v15-shop-row{grid-template-columns:32px minmax(180px,2fr) 120px 100px 130px 110px}
+.v15-shop-btns{display:flex;gap:8px;flex-wrap:wrap}
+.v15-shop-row small{font-size:12px!important}
+.v15-shop-row input[type=checkbox]{width:22px;height:22px;accent-color:var(--green)}
+@media(max-width:900px){
+  .v15-shop-row,.v15-shop-list.edit-prices .v15-shop-row{grid-template-columns:32px 1fr 90px}
+  .v15-shop-row .sp-find{grid-column:2/-1;justify-self:start}
+  .v15-shop-row .v15-price{grid-column:2/-1}
+}
+.ht-names{border:0;background:none;padding:0 2px;font:inherit;color:var(--orange);font-weight:700;text-decoration:underline;cursor:pointer;min-height:0}
+.account-card h2{font-family:Georgia,serif;color:var(--green);margin:5px 0}
+.account-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.account-actions .danger-btn{min-height:44px}
+.show-more-wrap{grid-column:1/-1;display:flex;justify-content:center;padding:8px 0 4px}
+.show-more-wrap .ghost-btn{min-height:46px;padding:0 22px}
+.sp-link{min-height:40px;padding:4px 0;text-align:left}
+.credits-link{display:inline-block;padding:10px 4px}
+.exact-weight{font-weight:500!important}
+@media(max-width:760px){
+  #view-recipes .filters{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important}
+  #view-recipes .filters .search{grid-column:1/-1!important}
+  #view-recipes .filters #resetFilters{grid-column:1/-1}
+  #view-recipes .recipe-img-wrap{height:180px!important}
+  .v15-toolbar,.sp-toolbar{display:grid!important;grid-template-columns:1fr 1fr;gap:8px}
+  .sp-toolbar #spReset{grid-column:1/-1}
+}
+.ht-names{display:inline-flex;align-items:center;min-height:40px!important;padding:0 6px}
+.credits-link{display:inline-flex;align-items:center;min-height:40px}
