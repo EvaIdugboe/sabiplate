@@ -300,3 +300,9 @@ details.safety summary::-webkit-details-marker{display:none}
   .topbar .auth-create-btn,.topbar .auth-link-btn,.topbar .brand{min-height:40px}
   #spModal .modal-close,#spModal .chooser-close{position:sticky;top:0}
 }
+
+/* ---------- r15: Canva logo ---------- */
+.brand-logo{width:44px!important;height:44px!important;flex:0 0 44px;border-radius:50%;background:#fffdf8!important}
+.brand-word{font-family:Georgia,"Times New Roman",serif;font-size:24px;letter-spacing:-.01em;color:var(--green)}
+.bw-sabi{color:var(--orange)}
+@media(max-width:760px){.brand-logo{width:36px!important;height:36px!important;flex-basis:36px}.brand-word{font-size:20px}}
