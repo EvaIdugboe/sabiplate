@@ -561,7 +561,7 @@ main{max-width:1320px;margin:0 auto}.view{display:none;padding:24px}.view.active
   }
   function renderPlanner(){
     const el=$('#view-planner');
-    el.innerHTML=`<div class="page-head"><div><span class="eyebrow">Meal plan</span><h1>Your 14-day plan</h1><p>A few batch-cooked dishes, repeated on purpose so you cook less. Swap, lock or remove any meal and the portions, shopping list and prep plan update.</p></div></div>`;
+    el.innerHTML=`<div class="page-head"><div><span class="eyebrow">Meal plan</span><h1>Your meal plan</h1><p>Meals for everyone at your table, portioned for each person. Swap, lock or remove any meal and the portions, shopping list and prep plan update.</p></div></div>`;
   }
 
   function openMealChooser(day,slot){state.chooser={day,slot,q:''};renderMealChooser();const m=$('#mealChooser');m.classList.add('open');m.setAttribute('aria-hidden','false');lockBody();setTimeout(()=>$('#chooserSearch')?.focus(),0)}
@@ -645,11 +645,11 @@ main{max-width:1320px;margin:0 auto}.view{display:none;padding:24px}.view.active
 @media(max-width:360px){.v15-plates{grid-template-columns:1fr}.v15-summary,.v15-cost-grid{grid-template-columns:1fr 1fr}.v15-gallery button{min-width:88%}}
 </style>
 
-<link rel="stylesheet" href="./assets/plan.css?v=r15">
+<link rel="stylesheet" href="./assets/plan.css?v=r16">
 <script src="./assets/photo-credits.js?v=r5"></script>
 <script src="./assets/plan-data.js?v=20261117-r3" defer></script>
 <script src="./assets/my-recipes.js?v=r9" defer></script>
-<script src="./assets/plan-engine.js?v=r12" defer></script>
+<script src="./assets/plan-engine.js?v=r13" defer></script>
 
 <script src="./assets/auth-sync.bundle.js?v=20260821-auth3" defer></script>
 <!-- Hosted parity build: actual SabiPlate v15 prototype -->

@@ -306,3 +306,15 @@ details.safety summary::-webkit-details-marker{display:none}
 .brand-word{font-family:Georgia,"Times New Roman",serif;font-size:24px;letter-spacing:-.01em;color:var(--green)}
 .bw-sabi{color:var(--orange)}
 @media(max-width:760px){.brand-logo{width:36px!important;height:36px!important;flex-basis:36px}.brand-word{font-size:20px}}
+
+/* ---------- r16: plan set-up and any plan length ---------- */
+.w-q{display:block;margin-bottom:6px;color:var(--green)}
+.w-len button,.w-start button{min-width:auto;padding:0 14px}
+.sp-empty{text-align:left}
+.sp-empty .primary-btn{margin-top:8px}
+.ht-start .primary-btn{margin-top:14px}
+.ht-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+.ht-steps div{background:var(--soft);border-radius:14px;padding:12px 14px;display:flex;gap:10px;align-items:center}
+.ht-steps b{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--green);color:#fff;flex:0 0 30px}
+.ht-steps span{font-weight:600;color:var(--ink);font-size:14px}
+@media(max-width:760px){.ht-steps{grid-template-columns:1fr}}

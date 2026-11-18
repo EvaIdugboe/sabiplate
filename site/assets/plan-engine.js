@@ -1,6 +1,6 @@
 /* SabiPlate household plan engine.
-   One shared 14-day plan; every person gets their own portions of the same dishes.
-   Planner, fortnight shop and prep plan are all derived from the plan state. */
+   One shared plan (3 to 28 days, chosen by the user); every person gets their own portions of the same dishes.
+   Planner, shopping list and prep plan are all derived from the plan state. No plan exists until the user creates one. */
 (() => {
 'use strict';
 const D = window.SABI_PLAN_DATA, dbg = window.SABI_DEBUG;
@@ -17,7 +17,15 @@ const store = {
 };
 const SLOTS = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const dayLabel = di => `Week ${Math.floor(di / 7) + 1} ${DAY_NAMES[di % 7]}`;
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const LENGTHS = [3, 5, 7, 14, 21, 28];
+const isoDay = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const dateOf = di => { const d = new Date((plan?.start || isoDay(new Date())) + 'T00:00:00'); d.setDate(d.getDate() + di); return d; };
+const dayName = di => DAY_NAMES[(dateOf(di).getDay() + 6) % 7];
+const dayDate = di => { const d = dateOf(di); return `${d.getDate()} ${MONTHS[d.getMonth()]}`; };
+const dayLabel = di => `${dayName(di)} ${dayDate(di)}`;
+const planLen = () => plan ? plan.days.length : 0;
+const nWeeks = () => Math.ceil(planLen() / 7);
 const GOALS = { loss: 'Lose fat', maintain: 'Stay the same', gain: 'Build muscle', custom: 'Custom' };
 const GOAL_KCAL = { loss: 1750, maintain: 2200, gain: 2800 };
 const MIN_KCAL = 1200, MAX_KCAL = 4500, MAX_MEMBERS = 6;
@@ -54,12 +62,44 @@ let members = cleanMembers(store.get('sabiplate-household-v1', null)) || default
 
 /* ---------- Plan state ---------- */
 const validId = id => !!(id && D.ing[id] && rmap[id]);
-function defaultPlan() { return { v: 2, days: D.defaultPlan.map(row => Object.fromEntries(SLOTS.map((s, i) => [s, validId(row[i]) ? { id: row[i], lock: false } : null]))) }; }
-function cleanPlan(p) {
-  if (!p || !Array.isArray(p.days) || p.days.length !== 14) return null;
-  return { v: 2, days: p.days.map(d => Object.fromEntries(SLOTS.map(s => [s, d && d[s] && validId(d[s].id) ? { id: d[s].id, lock: !!d[s].lock } : null]))) };
+function rowDay(row) { return Object.fromEntries(SLOTS.map((s, i) => [s, validId(row[i]) ? { id: row[i], lock: false } : null])); }
+function freshDays(n, from = 0) {
+  const base = D.defaultPlan, days = [];
+  for (let i = 0; i < n; i++) days.push(rowDay(base[(from + i) % base.length]));
+  return days;
 }
-let plan = cleanPlan(store.get('sabiplate-plan14-v2', null)) || defaultPlan();
+function varyDays(days, from) {
+  // days from index `from` onwards get different dishes of the same type, keeping batches together
+  const swap = {}, used = new Set(days.slice(0, from).flatMap(d => SLOTS.map(s => d[s]?.id).filter(Boolean)));
+  for (let i = from; i < days.length; i++) for (const sl of SLOTS) {
+    const e = days[i][sl]; if (!e) continue;
+    if (!swap[e.id]) { const type = slotType(sl); const pool = recipes.filter(r => recipeType(r) === type && validId(r.id) && !used.has(r.id)); const pick = pool.length ? pool[Math.floor(Math.random() * pool.length)].id : e.id; swap[e.id] = pick; used.add(pick); }
+    days[i][sl] = { id: swap[e.id], lock: false };
+  }
+  return days;
+}
+function makePlan(len, start) {
+  len = LENGTHS.includes(Number(len)) ? Number(len) : 7;
+  const days = freshDays(len);
+  if (len > 14) varyDays(days, 14);
+  return { v: 3, start: start || isoDay(new Date()), days };
+}
+function defaultPlan() { return makePlan(14, mondayIso()); }
+function mondayIso() { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return isoDay(d); }
+function cleanPlan(p) {
+  if (!p || !Array.isArray(p.days) || !p.days.length || p.days.length > 28) return null;
+  return { v: 3, start: /^\d{4}-\d{2}-\d{2}$/.test(p.start || '') ? p.start : mondayIso(), days: p.days.map(d => Object.fromEntries(SLOTS.map(s => [s, d && d[s] && validId(d[s].id) ? { id: d[s].id, lock: !!d[s].lock } : null]))) };
+}
+function loadPlan() {
+  const v3 = store.get('sabiplate-plan-v3', undefined);
+  if (v3 === null) return null; // user has no plan yet
+  if (v3) return cleanPlan(v3);
+  const old = store.get('sabiplate-plan14-v2', null);
+  if (old) { const p = cleanPlan({ ...old, start: store.get('sabiplate-plan-start', null) || mondayIso() }); store.set('sabiplate-plan-v3', p); return p; }
+  if (store.get('sabiplate-household-v1', null)) { const p = defaultPlan(); store.set('sabiplate-plan-v3', p); return p; }
+  return null;
+}
+let plan = loadPlan();
 let undoPlan = null;
 let week = store.get('sabiplate-v15-week', null);
 let have = new Set(store.get('sabiplate-v15-have', []));
@@ -67,8 +107,8 @@ let priceOverrides = store.get('sabiplate-v15-price-overrides', {});
 let model = null;
 function commitPlan(next, message) {
   undoPlan = JSON.stringify(plan);
-  plan = cleanPlan(next) || defaultPlan();
-  store.set('sabiplate-plan14-v2', plan);
+  plan = next === null ? null : (cleanPlan(next) || plan);
+  store.set('sabiplate-plan-v3', plan);
   model = null;
   renderAll();
   if (message) toast(message);
@@ -76,8 +116,8 @@ function commitPlan(next, message) {
 const clonePlan = () => JSON.parse(JSON.stringify(plan));
 const slotType = s => (s === 'Breakfast' || s === 'Snack') ? s : 'Main';
 const recipeType = r => (r.category === 'Breakfast' || r.category === 'Snack') ? r.category : 'Main';
-const countMeals = () => plan.days.reduce((n, d) => n + SLOTS.filter(s => d[s]).length, 0);
-function occurrences(id) { const out = []; plan.days.forEach((d, di) => SLOTS.forEach(s => { if (d[s]?.id === id) out.push([di, s]); })); return out; }
+const countMeals = () => !plan ? 0 : plan.days.reduce((n, d) => n + SLOTS.filter(s => d[s]).length, 0);
+function occurrences(id) { const out = []; if (!plan) return out; plan.days.forEach((d, di) => SLOTS.forEach(s => { if (d[s]?.id === id) out.push([di, s]); })); return out; }
 
 /* ---------- Portion engine ----------
    Ingredients fall into four groups: protein foods, carbohydrate foods, fats, and
@@ -142,7 +182,8 @@ function itemsFor(k, id) {
 function buildModel() {
   if (model) return model;
   const T = members.map(targetOf);
-  const need = {}, byWeekRecipe = [{}, {}], avg = members.map(() => ({ kcal: 0, protein: 0, carbs: 0, fat: 0 }));
+  if (!plan) { model = { T, days: [], avg: members.map(() => ({ kcal: 0, protein: 0, carbs: 0, fat: 0 })), need: {}, need2: {}, byWeekRecipe: [], plannedDays: 0 }; return model; }
+  const need = {}, need2 = {}, byWeekRecipe = Array.from({ length: nWeeks() }, () => ({})), avg = members.map(() => ({ kcal: 0, protein: 0, carbs: 0, fat: 0 }));
   let plannedDays = 0;
   const days = plan.days.map((day, di) => {
     const slots = SLOTS.filter(s => day[s]);
@@ -161,7 +202,7 @@ function buildModel() {
         for (const key of ['kcal', 'protein', 'carbs', 'fat']) totals[i][key] += p[key];
         for (const ing of p.ingredients) {
           agg[ing.k] = (agg[ing.k] || 0) + ing.g;
-          for (const [item, factor] of itemsFor(ing.k, id)) need[item] = (need[item] || 0) + ing.g * factor;
+          for (const [item, factor] of itemsFor(ing.k, id)) { const bag = di < 14 ? need : need2; bag[item] = (bag[item] || 0) + ing.g * factor; }
         }
       });
     }
@@ -169,7 +210,7 @@ function buildModel() {
     return { di, meals, totals };
   });
   avg.forEach(a => { for (const key in a) a[key] = plannedDays ? a[key] / plannedDays : 0; });
-  model = { T, days, avg, need, byWeekRecipe, plannedDays };
+  model = { T, days, avg, need, need2, byWeekRecipe, plannedDays };
   return model;
 }
 
@@ -179,11 +220,11 @@ function fmtNeed(n, unit) { if (unit === 'count') return String(Math.ceil(n - 1e
 function shopRows() {
   const mo = buildModel();
   const rows = [];
-  for (const [key, needed] of Object.entries(mo.need)) {
-    const it = D.items[key]; if (!it || needed <= 0.01) continue;
-    const p1 = Math.max(1, Math.ceil(needed / it.pack - 1e-9));
-    const left = p1 * it.pack - needed;
-    const p2 = Math.max(0, Math.ceil((needed - left) / it.pack - 1e-9));
+  for (const key of new Set([...Object.keys(mo.need), ...Object.keys(mo.need2)])) {
+    const it = D.items[key]; const n1 = mo.need[key] || 0, n2 = mo.need2[key] || 0, needed = n1 + n2; if (!it || needed <= 0.01) continue;
+    const p1 = n1 > 0.01 ? Math.max(1, Math.ceil(n1 / it.pack - 1e-9)) : 0;
+    const left = p1 * it.pack - n1;
+    const p2 = n2 > 0.01 ? Math.max(0, Math.ceil((n2 - left) / it.pack - 1e-9)) : 0;
     rows.push({ key, name: it.name, category: it.cat, storage: it.storage, unit: it.unit, pack_size: it.pack, unit_price: it.price, needed, needed_display: fmtNeed(needed, it.unit), packs_first_shop: p1, packs_second_shop: p2 });
   }
   rows.sort((a, b) => (CAT_ORDER.indexOf(a.category) - CAT_ORDER.indexOf(b.category)) || a.name.localeCompare(b.name));
@@ -192,15 +233,16 @@ function shopRows() {
 function currentCosts() {
   let first = 0, second = 0;
   for (const row of shopRows()) { const p = priceOverrides[row.key] ?? row.unit_price; if (!have.has(row.key)) first += row.packs_first_shop * p; second += row.packs_second_shop * p; }
-  return { first, second, month: first + second, ppd: (first + second) / (28 * members.length) };
+  return { first, second, month: first + second, ppd: (first + second) / (Math.max(1, planLen()) * members.length) };
 }
 
 /* ---------- Prep ---------- */
 function prepModel() {
   const mo = buildModel();
-  const weeks = [0, 1].map(w => {
-    const occ = {};
-    for (let d = 0; d < 7; d++) { const day = plan.days[w * 7 + d]; for (const s of SLOTS) if (day[s]) (occ[day[s].id] ??= []).push([d, s]); }
+  if (!plan) return [];
+  const weeks = Array.from({ length: nWeeks() }, (_, w) => w).map(w => {
+    const occ = {}, wdays = Math.min(7, planLen() - w * 7);
+    for (let d = 0; d < wdays; d++) { const day = plan.days[w * 7 + d]; for (const s of SLOTS) if (day[s]) (occ[day[s].id] ??= []).push([d, s]); }
     const sessions = { sun: [], wed: [] }, quick = [];
     for (const [id, list] of Object.entries(occ)) {
       const r = rmap[id]; if (!r) continue;
@@ -208,7 +250,7 @@ function prepModel() {
       const ingredients = Object.entries(grams).map(([k, g]) => ({ k, g })).sort((a, b) => b.g - a.g);
       if (recipeType(r) !== 'Main') { quick.push({ id, title: r.title, times: list.length, kind: r.category, ingredients, prep: r.prep }); continue; }
       const first = list[0][0];
-      const cookDay = first <= 2 ? -1 : 2; // Sunday before the week, or Wednesday evening
+      const cookDay = first <= 2 || wdays <= 4 ? -1 : 2; // before the week starts, or a mid-week top-up
       const rice = ingredients.some(i => /rice/.test(i.k));
       const fridge = list.filter(([d]) => d - cookDay <= (rice ? 1 : 3)).length;
       (cookDay === -1 ? sessions.sun : sessions.wed).push({ id, title: r.title, occ: list, plates: list.length * members.length, rice, fridge: fridge * members.length, freeze: (list.length - fridge) * members.length, ingredients, prep: r.prep });
@@ -218,7 +260,9 @@ function prepModel() {
       for (const b of batches) for (const i of b.ingredients) if ((GROUP[i.k] || 'v') === 'v' && D.foods[i.k] && !/sauce|frozen|mixed|stock|paste|puree|purée|tinned|canned|cooked/.test(foodName(i.k))) { sum[i.k] = (sum[i.k] || 0) + i.g; uses[i.k] = (uses[i.k] || 0) + 1; }
       return Object.entries(sum).filter(([k, g]) => g >= 40).map(([k, g]) => ({ k, g, uses: uses[k] })).sort((a, b) => b.g - a.g);
     };
-    return { w, sessions: [{ key: 'sun', label: `Week ${w + 1} · Sunday`, batches: sessions.sun, chop: chopFor(sessions.sun) }, { key: 'wed', label: `Week ${w + 1} · Wednesday top-up`, batches: sessions.wed, chop: chopFor(sessions.wed) }].filter(s => s.batches.length), quick };
+    const pre = DAY_NAMES[(dateOf(w * 7).getDay() + 6 + 6) % 7], mid = dayName(w * 7 + 2), wk = nWeeks() > 1 ? `Week ${w + 1} · ` : '';
+    const t0 = new Date(); t0.setHours(0, 0, 0, 0); const sameDay = dateOf(w * 7) <= t0;
+    return { w, sessions: [{ key: 'sun', label: sameDay ? `${wk}${dayLabel(w * 7)} · cook first` : `${wk}${pre} before ${dayLabel(w * 7)}`, batches: sessions.sun, chop: chopFor(sessions.sun) }, { key: 'wed', label: `${wk}${mid} ${dayDate(w * 7 + 2)} top-up`, batches: sessions.wed, chop: chopFor(sessions.wed) }].filter(s => s.batches.length), quick };
   });
   return weeks;
 }
@@ -271,17 +315,19 @@ function pickedDay(visible) {
 }
 function dayTabs(visible) {
   const cur = pickedDay(visible);
-  return `<div class="v15-day-tabs no-print" role="tablist" aria-label="Choose a day">${visible.map(x => `<button type="button" role="tab" aria-selected="${x.di === cur}" class="${x.di === cur ? 'active' : ''}" data-sp-day="${x.di}"><b>${DAY_NAMES[x.di % 7]}</b><small>${x.di === todayIndex() ? 'Today' : 'Day ' + (x.di + 1)}</small></button>`).join('')}</div>`;
+  return `<div class="v15-day-tabs no-print" role="tablist" aria-label="Choose a day">${visible.map(x => `<button type="button" role="tab" aria-selected="${x.di === cur}" class="${x.di === cur ? 'active' : ''}" data-sp-day="${x.di}"><b>${dayName(x.di)}</b><small>${x.di === todayIndex() ? 'Today' : dayDate(x.di)}</small></button>`).join('')}</div>`;
 }
 function plannerHtml() {
-  if (week === null) week = String(Math.floor(todayIndex() / 7) + 1);
+  if (!plan) return emptyHtml('Meal plan', 'You haven\'t made a meal plan yet', 'Tell us who\'s eating and how many days you want to plan for, from 3 days to 4 weeks. SabiPlate then picks the meals, portions them for each person, and builds your shopping list and prep plan.');
+  const ti = Math.max(0, todayIndex());
+  if (nWeeks() <= 1) week = 'all'; else if (week === null || (week !== 'all' && Number(week) > nWeeks())) week = String(Math.floor(ti / 7) + 1);
   const mo = buildModel(), c = currentCosts(), prep = prepModel();
   const mainCount = {};
   plan.days.forEach(d => ['Lunch', 'Dinner'].forEach(s => { if (d[s]) mainCount[d[s].id] = (mainCount[d[s].id] || 0) + 1; }));
   const mains = Object.entries(mainCount).sort((a, b) => b[1] - a[1]);
   const sessions = prep.reduce((n, w) => n + w.sessions.length, 0);
   const visible = mo.days.filter(x => week === 'all' || String(Math.floor(x.di / 7) + 1) === String(week));
-  return `<section class="v15-card v15-hero"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap"><div><span class="eyebrow">${planWord()} · 2 weeks</span><h2>${headline()} One shop.</h2></div><div class="sp-toolbar no-print"><button type="button" id="spEditHouse" class="ghost-btn">Edit household</button><button type="button" id="spShuffle" class="ghost-btn" title="New meals everywhere except the ones you've locked">Shuffle meals</button><button type="button" id="spReset" class="ghost-btn">Reset plan</button>${undoPlan ? '<button type="button" id="spUndo" class="ghost-btn">Undo</button>' : ''}</div></div>${targetCards()}<p class="v15-sumline">${mains.length} main dishes · ${sessions} cooking sessions · ${countMeals()} meals · about ${money(c.first)} for this shop</p>${mains.length > 8 ? `<div class="v15-note"><b>That is ${mains.length} different main dishes.</b> Fewer dishes means less cooking. Swap a few so the same batch covers more meals.</div>` : ''}<h3 style="font-family:Georgia,serif;color:var(--green)">What you'll cook</h3><div class="v15-gallery">${mains.map(([id, n]) => `<button type="button" data-sp-view="${esc(id)}"><img src="${esc(img(id))}" alt="${esc(rmap[id].title)}" loading="lazy"><span><small>${n} meal${n === 1 ? '' : 's'}</small><b>${esc(rmap[id].title)}</b></span></button>`).join('')}</div><div class="v15-week-tabs no-print"><button type="button" data-sp-week="1" class="${week === '1' ? 'active' : ''}">Week 1</button><button type="button" data-sp-week="2" class="${week === '2' ? 'active' : ''}">Week 2</button><button type="button" data-sp-week="all" class="${week === 'all' ? 'active' : ''}">All 14 days</button></div>${dayTabs(visible)}<div class="v15-days">${visible.map(x => `<article class="v15-day ${x.di === pickedDay(visible) ? 'picked' : ''}" id="spDay${x.di}"><div class="v15-day-head"><div><small>Week ${Math.floor(x.di / 7) + 1}</small><h3>${DAY_NAMES[x.di % 7]} · Day ${x.di + 1}${x.di === todayIndex() ? ' <span class="sp-today">Today</span>' : ''}</h3></div><div class="v15-day-totals">${Object.keys(x.meals).length ? dayTotalsHtml(x) : '<div>No meals planned</div>'}</div></div>${SLOTS.map(s => x.meals[s] ? mealCard(x.di, s, x.meals[s]) : `<button type="button" class="sp-empty no-print" data-sp-add="${x.di}|${s}">+ Add ${s.toLowerCase()}</button>`).join('')}</article>`).join('')}</div><div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"><button type="button" class="primary-btn" id="spGoShop">See shopping list</button><button type="button" class="secondary-btn" id="spGoPrep">See meal prep</button><button type="button" class="ghost-btn" id="spPrint">Print plan</button></div></section>`;
+  return `<section class="v15-card v15-hero"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap"><div><span class="eyebrow">${planWord()} · ${planLen()} days from ${esc(dayDate(0))}</span><h2>${headline()} One shop.</h2></div><div class="sp-toolbar no-print"><button type="button" id="spEditHouse" class="ghost-btn">Edit household</button><button type="button" id="spPlanSettings" class="ghost-btn">Change plan length</button><button type="button" id="spShuffle" class="ghost-btn" title="New meals everywhere except the ones you've locked">Shuffle meals</button><button type="button" id="spReset" class="ghost-btn">Start again</button>${undoPlan ? '<button type="button" id="spUndo" class="ghost-btn">Undo</button>' : ''}</div></div>${targetCards()}<p class="v15-sumline">${mains.length} main dishes · ${sessions} cooking sessions · ${countMeals()} meals · about ${money(c.first)} for this shop</p>${mains.length > 8 ? `<div class="v15-note"><b>That is ${mains.length} different main dishes.</b> Fewer dishes means less cooking. Swap a few so the same batch covers more meals.</div>` : ''}<h3 style="font-family:Georgia,serif;color:var(--green)">What you'll cook</h3><div class="v15-gallery">${mains.map(([id, n]) => `<button type="button" data-sp-view="${esc(id)}"><img src="${esc(img(id))}" alt="${esc(rmap[id].title)}" loading="lazy"><span><small>${n} meal${n === 1 ? '' : 's'}</small><b>${esc(rmap[id].title)}</b></span></button>`).join('')}</div>${nWeeks() > 1 ? `<div class="v15-week-tabs no-print">${weekGroups().map((g, w) => `<button type="button" data-sp-week="${w + 1}" class="${week === String(w + 1) ? 'active' : ''}">Week ${w + 1}</button>`).join('')}<button type="button" data-sp-week="all" class="${week === 'all' ? 'active' : ''}">All ${planLen()} days</button></div>` : ''}${dayTabs(visible)}<div class="v15-days">${visible.map(x => `<article class="v15-day ${x.di === pickedDay(visible) ? 'picked' : ''}" id="spDay${x.di}"><div class="v15-day-head"><div><small>Week ${Math.floor(x.di / 7) + 1}</small><h3>${dayLabel(x.di)} · Day ${x.di + 1}${x.di === todayIndex() ? ' <span class="sp-today">Today</span>' : ''}</h3></div><div class="v15-day-totals">${Object.keys(x.meals).length ? dayTotalsHtml(x) : '<div>No meals planned</div>'}</div></div>${SLOTS.map(s => x.meals[s] ? mealCard(x.di, s, x.meals[s]) : `<button type="button" class="sp-empty no-print" data-sp-add="${x.di}|${s}">+ Add ${s.toLowerCase()}</button>`).join('')}</article>`).join('')}</div><div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"><button type="button" class="primary-btn" id="spGoShop">See shopping list</button><button type="button" class="secondary-btn" id="spGoPrep">See meal prep</button><button type="button" class="ghost-btn" id="spPrint">Print plan</button></div></section>`;
 }
 
 /* ---------- Shop view ---------- */
@@ -299,7 +345,7 @@ function shopAt0() { const v = (() => { try { return JSON.parse(localStorage.get
 const searchTerm = name => name.replace(/\(.*?\)/g, '').split(/\s*\/\s*/)[0].replace(/\b(frozen recommended|for swallow|for eba)\b/gi, '').replace(/\s+/g, ' ').trim();
 function listText(rows) {
   let cat = '', out = 'SabiPlate shopping list\n';
-  for (const r of rows) { if (have.has(r.key)) continue; if (r.category !== cat) { cat = r.category; out += `\n${cat}\n`; } out += `- ${r.name}: ${r.packs_first_shop} × ${fmtNeed(r.pack_size, r.unit)} (need ${r.needed_display})\n`; }
+  for (const r of rows) { if (have.has(r.key) || !r.packs_first_shop) continue; if (r.category !== cat) { cat = r.category; out += `\n${cat}\n`; } out += `- ${r.name}: ${r.packs_first_shop} × ${fmtNeed(r.pack_size, r.unit)} (need ${r.needed_display})\n`; }
   const extra = (dbg.state?.customShop || []).filter(x => !x.done);
   if (extra.length) out += `\n\nAlso buy\n${extra.map(x => '- ' + x.text).join('\n')}`;
   return out.trim();
@@ -320,13 +366,14 @@ function extrasHtml() {
   return `<section class="sp-extras no-print-hide"><h3 class="sp-cat">Your extra items</h3>${list.length ? `<div class="v15-shop-list">${list.map(x => `<div class="sp-extra-row ${x.done ? 'have' : ''}"><input type="checkbox" data-sp-extra-done="${esc(x.id)}" ${x.done ? 'checked' : ''} aria-label="Got ${esc(x.text)}"><span>${esc(x.text)}</span><button type="button" class="sp-remove" data-sp-extra-del="${esc(x.id)}" aria-label="Remove ${esc(x.text)}">Remove</button></div>`).join('')}</div>` : '<p class="muted" style="margin:4px 0 8px">Anything else you need, like foil or plantain.</p>'}<div class="sp-extra-add no-print"><input id="spExtraInput" placeholder="Add something else, e.g. foil, plantain" aria-label="Add an extra item" autocomplete="off"><button type="button" class="ghost-btn" id="spExtraAdd">Add</button></div></section>`;
 }
 function shoppingHtml() {
-  const c = currentCosts(), rows = shopRows();
+  if (!plan) return emptyHtml('Shopping', 'Your shopping list is empty', 'Once you make a meal plan, everything you need appears here, worked out for everyone you\'re feeding. Nothing is added until you decide.', 'h1');
+  const c = currentCosts(), rows = shopRows(), long = planLen() > 14;
   if (!rows.length) return `<section class="v15-card"><span class="eyebrow">Shopping</span><h2 style="font-family:Georgia,serif;color:var(--green);margin:5px 0">Your shopping list is empty.</h2><p class="muted">Add meals to your plan and the list fills itself in.</p></section>`;
   let cat = '';
-  return `<section class="v15-card"><span class="eyebrow">Shopping</span><h1 class="v15-h1">Your shopping list</h1><p class="muted">This shop covers your 2-week plan for ${esc(namesList())}. Leftover packs carry over, so if you repeat the plan, a smaller top-up covers weeks 3 and 4. The list updates when the plan changes.</p><div class="v15-cost-grid"><div><strong>${money(c.first)}</strong><span>This shop</span></div><div><strong>${money(c.second)}</strong><span>Top-up for weeks 3–4</span></div><div><strong>${money(c.month)}</strong><span>4 weeks, if you repeat it</span></div><div><strong>${money(c.ppd)}</strong><span>Per person, per day</span></div></div><div class="sp-store no-print"><label>Shop at <select id="spStore">${Object.entries(STORES).map(([k, v]) => `<option value="${k}" ${k === shopAt ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select></label><button type="button" class="ghost-btn" id="spCopy">Copy list</button><button type="button" class="ghost-btn" id="spShare">Share list</button></div><p class="muted sp-store-note no-print">“Find at ${esc(STORES[shopAt].name)}” opens their website search so you can add the item to your basket.</p><div class="v15-shop-controls"><span><b>${rows.length} items</b><small class="muted sp-tickhint">Tick anything you already have</small></span><span class="v15-shop-btns"><button type="button" id="spEditPrices" class="ghost-btn" aria-pressed="${editPrices}">${editPrices ? 'Done editing prices' : 'Edit prices'}</button><button type="button" id="spClearHave" class="ghost-btn">Untick all</button></span></div><div class="v15-shop-list ${editPrices ? 'edit-prices' : ''}">${rows.map(row => {
+  return `<section class="v15-card"><span class="eyebrow">Shopping</span><h1 class="v15-h1">Your shopping list</h1><p class="muted">${long ? `This shop covers the first 14 days of your ${planLen()}-day plan for ${esc(namesList())}. A smaller top-up on ${esc(dayLabel(14))} covers the rest, so fresh food stays fresh.` : `Everything for your ${planLen()}-day plan for ${esc(namesList())}, starting ${esc(dayLabel(0))}.`} The list updates when the plan changes.</p><div class="v15-cost-grid"><div><strong>${money(c.first)}</strong><span>${long ? 'This shop' : 'Total'}</span></div>${long ? `<div><strong>${money(c.second)}</strong><span>Top-up on ${esc(dayLabel(14))}</span></div><div><strong>${money(c.month)}</strong><span>Whole plan</span></div>` : ''}<div><strong>${money(c.ppd)}</strong><span>Per person, per day</span></div></div><div class="sp-store no-print"><label>Shop at <select id="spStore">${Object.entries(STORES).map(([k, v]) => `<option value="${k}" ${k === shopAt ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select></label><button type="button" class="ghost-btn" id="spCopy">Copy list</button><button type="button" class="ghost-btn" id="spShare">Share list</button></div><p class="muted sp-store-note no-print">“Find at ${esc(STORES[shopAt].name)}” opens their website search so you can add the item to your basket.</p><div class="v15-shop-controls"><span><b>${rows.length} items</b><small class="muted sp-tickhint">Tick anything you already have</small></span><span class="v15-shop-btns"><button type="button" id="spEditPrices" class="ghost-btn" aria-pressed="${editPrices}">${editPrices ? 'Done editing prices' : 'Edit prices'}</button><button type="button" id="spClearHave" class="ghost-btn">Untick all</button></span></div><div class="v15-shop-list ${editPrices ? 'edit-prices' : ''}">${rows.map(row => {
     const p = priceOverrides[row.key] ?? row.unit_price, line = row.packs_first_shop * p;
     const head = row.category !== cat ? `<h3 class="sp-cat">${esc(cat = row.category)}</h3>` : '';
-    return `${head}<div class="v15-shop-row ${have.has(row.key) ? 'have' : ''}"><label class="sp-tick"><input type="checkbox" data-sp-have="${row.key}" ${have.has(row.key) ? 'checked' : ''} aria-label="Already have ${esc(row.name)}"></label><span><b>${esc(row.name)}</b><small>You need ${esc(row.needed_display)} for these 2 weeks</small><small>${esc(row.storage)}</small></span><span class="v15-buy"><b>Buy ${row.packs_first_shop} × ${esc(fmtNeed(row.pack_size, row.unit))}</b><small>${row.packs_second_shop ? `Weeks 3–4 top-up: ${row.packs_second_shop} more` : 'No top-up needed'}</small></span><span class="v15-linecost"><b>${money(line)}</b><small>this shop</small></span><a class="sp-find no-print" href="${esc(STORES[shopAt].url(searchTerm(row.name)))}" target="_blank" rel="noopener">Find at ${esc(STORES[shopAt].name)}</a><span class="v15-price"><small>Price per pack (£)</small><input type="number" min="0" step=".01" value="${Number(p).toFixed(2)}" data-sp-price="${row.key}" aria-label="Price per pack for ${esc(row.name)}"></span></div>`;
+    return `${head}<div class="v15-shop-row ${have.has(row.key) ? 'have' : ''}"><label class="sp-tick"><input type="checkbox" data-sp-have="${row.key}" ${have.has(row.key) ? 'checked' : ''} aria-label="Already have ${esc(row.name)}"></label><span><b>${esc(row.name)}</b><small>You need ${esc(row.needed_display)} for the plan</small><small>${esc(row.storage)}</small></span><span class="v15-buy"><b>${row.packs_first_shop ? `Buy ${row.packs_first_shop}` : 'Top-up only:'} × ${esc(fmtNeed(row.pack_size, row.unit))}</b>${long ? `<small>${row.packs_second_shop ? `Top-up: ${row.packs_second_shop} more` : 'No top-up needed'}</small>` : ''}</span><span class="v15-linecost"><b>${money(line)}</b><small>this shop</small></span><a class="sp-find no-print" href="${esc(STORES[shopAt].url(searchTerm(row.name)))}" target="_blank" rel="noopener">Find at ${esc(STORES[shopAt].name)}</a><span class="v15-price"><small>Price per pack (£)</small><input type="number" min="0" step=".01" value="${Number(p).toFixed(2)}" data-sp-price="${row.key}" aria-label="Price per pack for ${esc(row.name)}"></span></div>`;
   }).join('')}</div>${extrasHtml()}<p class="shop-footnote">Ticked items come off the total. Prices are estimates and vary by shop; use “Edit prices” to put in what you pay. Spices, stock and seasonings aren't listed, so check your cupboard.</p></section>`;
 }
 
@@ -338,11 +385,12 @@ function storageLine(b) {
   return parts.join(' · ') + (b.rice ? '. Rice: cool within an hour, keep in the fridge no more than 1 day, and reheat only once' : '');
 }
 function prepHtml() {
+  if (!plan) return emptyHtml('Meal prep', 'Nothing to cook yet', 'Make a meal plan first. SabiPlate then tells you what to batch-cook, on which day, and how to store it.');
   const weeks = prepModel();
   if (!countMeals()) return `<section class="v15-card"><h2 style="font-family:Georgia,serif;color:var(--green);margin:5px 0">Nothing to cook yet.</h2><p class="muted">Add meals to your plan and your prep plan appears here.</p></section>`;
   const sessions = weeks.reduce((n, w) => n + w.sessions.length, 0);
   const qty = i => `<li><b>${esc(fmtg(i.g, i.k))}</b> ${['egg', 'egg_combo_2_1', 'wrap', 'pita', 'burger_bun'].includes(i.k) ? '' : esc(foodName(i.k))}</li>`;
-  return `<section class="v15-card"><h2 style="font-family:Georgia,serif;color:var(--green);margin:5px 0">${sessions} cooking session${sessions === 1 ? '' : 's'} cover the 2 weeks.</h2><p class="muted">Sunday covers Monday to Wednesday; a shorter Wednesday session covers the rest. Amounts are for everyone: ${esc(namesList())}.</p>${weeks.map(w => `${w.sessions.map(s => `<h3 class="sp-cat">${esc(s.label)}</h3>${s.chop.length ? `<div class="v15-note"><b>Chop these first, all at once:</b> ${s.chop.slice(0, 8).map(i => `${esc(fmtg(i.g, i.k))} ${esc(foodName(i.k))}`).join(', ')}.</div>` : ''}<div class="v15-batches">${s.batches.map(b => `<article class="v15-batch"><span class="session">${b.plates} portions · ${b.occ.length} meal${b.occ.length === 1 ? '' : 's'} · about ${b.prep} min</span><h3><button type="button" class="sp-link" data-sp-view="${esc(b.id)}">${esc(b.title)}</button></h3><small class="muted">${b.occ.map(([d, sl]) => DAY_NAMES[d] + ' ' + sl.toLowerCase()).join(' · ')}</small><ul>${b.ingredients.slice(0, 12).map(qty).join('')}</ul><div class="v15-note"><b>Store:</b> ${esc(storageLine(b))}. Cool quickly, label each portion, and reheat until steaming hot all the way through.</div></article>`).join('')}</div>`).join('')}${w.quick.length ? `<h3 class="sp-cat">Week ${w.w + 1} · breakfasts and snacks</h3><div class="v15-batches">${w.quick.map(q => `<article class="v15-batch"><span class="session">${esc(q.kind)} · ${q.times} time${q.times === 1 ? '' : 's'} · about ${q.prep} min each</span><h3><button type="button" class="sp-link" data-sp-view="${esc(q.id)}">${esc(q.title)}</button></h3><ul>${q.ingredients.slice(0, 8).map(qty).join('')}</ul><small class="muted">Amounts for the whole week. Make fresh, or the night before.</small></article>`).join('')}</div>` : ''}`).join('')}</section>`;
+  return `<section class="v15-card"><h2 style="font-family:Georgia,serif;color:var(--green);margin:5px 0">${sessions} cooking session${sessions === 1 ? '' : 's'} cover your ${planLen()} days.</h2><p class="muted">Cook the day before each week starts${planLen() > 4 ? ', then do a shorter top-up mid-week' : ''}. Amounts are for everyone: ${esc(namesList())}.</p>${weeks.map(w => `${w.sessions.map(s => `<h3 class="sp-cat">${esc(s.label)}</h3>${s.chop.length ? `<div class="v15-note"><b>Chop these first, all at once:</b> ${s.chop.slice(0, 8).map(i => `${esc(fmtg(i.g, i.k))} ${esc(foodName(i.k))}`).join(', ')}.</div>` : ''}<div class="v15-batches">${s.batches.map(b => `<article class="v15-batch"><span class="session">${b.plates} portions · ${b.occ.length} meal${b.occ.length === 1 ? '' : 's'} · about ${b.prep} min</span><h3><button type="button" class="sp-link" data-sp-view="${esc(b.id)}">${esc(b.title)}</button></h3><small class="muted">${b.occ.map(([d, sl]) => dayName(w.w * 7 + d) + ' ' + sl.toLowerCase()).join(' · ')}</small><ul>${b.ingredients.slice(0, 12).map(qty).join('')}</ul><div class="v15-note"><b>Store:</b> ${esc(storageLine(b))}. Cool quickly, label each portion, and reheat until steaming hot all the way through.</div></article>`).join('')}</div>`).join('')}${w.quick.length ? `<h3 class="sp-cat">${nWeeks() > 1 ? `Week ${w.w + 1} · ` : ''}Breakfasts and snacks</h3><div class="v15-batches">${w.quick.map(q => `<article class="v15-batch"><span class="session">${esc(q.kind)} · ${q.times} time${q.times === 1 ? '' : 's'} · about ${q.prep} min each</span><h3><button type="button" class="sp-link" data-sp-view="${esc(q.id)}">${esc(q.title)}</button></h3><ul>${q.ingredients.slice(0, 8).map(qty).join('')}</ul><small class="muted">Amounts for the whole week. Make fresh, or the night before.</small></article>`).join('')}</div>` : ''}`).join('')}</section>`;
 }
 
 /* ---------- Profile view ---------- */
@@ -405,14 +453,20 @@ function openSwap(di, slot) {
     commitPlan(next, cur ? `Swapped ${n} meal${n === 1 ? '' : 's'} to ${rmap[id].title}` : `Added ${rmap[id].title}`);
   };
 }
+function emptyHtml(eyebrow, title, text, tag = 'h2') {
+  return `<section class="v15-card sp-empty"><span class="eyebrow">${esc(eyebrow)}</span><${tag} class="v15-h1">${esc(title)}</${tag}><p class="muted">${esc(text)}</p><button type="button" class="primary-btn" data-sp-setup>Create my meal plan</button></section>`;
+}
+function weekGroups() { return Array.from({ length: nWeeks() }, (_, w) => Array.from({ length: Math.min(7, planLen() - w * 7) }, (_, d) => w * 7 + d)); }
+function needPlan() { if (plan) return false; openSetup(); return true; }
 function addRecipe(id) {
+  if (needPlan()) return;
   const r = rmap[id]; if (!r || !validId(id)) { toast('That recipe cannot be planned yet'); return; }
   const type = recipeType(r);
   let slot = type === 'Main' ? (r.category === 'Dinner' ? 'Dinner' : 'Lunch') : type;
   const chosen = new Set();
   const body = openModal('');
   const draw = () => {
-    body.innerHTML = `<div class="chooser-head"><div><span class="eyebrow">Add to your meal plan</span><h2 id="spModalTitle">${esc(r.title)}</h2></div></div>${type === 'Main' ? `<div class="picker-slots">${['Lunch', 'Dinner'].map(s => `<button type="button" class="${slot === s ? 'active' : ''}" data-sp-slot="${s}">${s}</button>`).join('')}</div>` : `<p class="muted">This goes in ${slot.toLowerCase()}.</p>`}<p class="muted">Pick one or more days. Cook it once and eat it on every day you pick.</p>${[0, 1].map(w => `<h3 class="sp-cat">Week ${w + 1}</h3><div class="sp-daygrid">${DAY_NAMES.map((n, d) => { const di = w * 7 + d, cur = plan.days[di][slot]; return `<button type="button" data-sp-day="${di}" class="${chosen.has(di) ? 'active' : ''}" ${cur?.lock ? 'disabled' : ''}><b>${n}</b><small>${cur ? (cur.lock ? 'Locked: ' : 'Replaces ') + esc(rmap[cur.id].title) : 'Empty'}</small></button>`; }).join('')}</div>`).join('')}<button type="button" class="primary-btn full" id="spAddGo" ${chosen.size ? '' : 'disabled'}>${chosen.size ? `Add to ${chosen.size} day${chosen.size === 1 ? '' : 's'}` : 'Pick at least one day'}</button>`;
+    body.innerHTML = `<div class="chooser-head"><div><span class="eyebrow">Add to your meal plan</span><h2 id="spModalTitle">${esc(r.title)}</h2></div></div>${type === 'Main' ? `<div class="picker-slots">${['Lunch', 'Dinner'].map(s => `<button type="button" class="${slot === s ? 'active' : ''}" data-sp-slot="${s}">${s}</button>`).join('')}</div>` : `<p class="muted">This goes in ${slot.toLowerCase()}.</p>`}<p class="muted">Pick one or more days. Cook it once and eat it on every day you pick.</p>${weekGroups().map((g, w) => `${nWeeks() > 1 ? `<h3 class="sp-cat">Week ${w + 1}</h3>` : ''}<div class="sp-daygrid">${g.map(di => { const cur = plan.days[di][slot]; return `<button type="button" data-sp-day="${di}" class="${chosen.has(di) ? 'active' : ''}" ${cur?.lock ? 'disabled' : ''}><b>${dayLabel(di)}</b><small>${cur ? (cur.lock ? 'Locked: ' : 'Replaces ') + esc(rmap[cur.id].title) : 'Empty'}</small></button>`; }).join('')}</div>`).join('')}<button type="button" class="primary-btn full" id="spAddGo" ${chosen.size ? '' : 'disabled'}>${chosen.size ? `Add to ${chosen.size} day${chosen.size === 1 ? '' : 's'}` : 'Pick at least one day'}</button>`;
   };
   draw();
   body.onclick = e => {
@@ -427,7 +481,8 @@ function addRecipe(id) {
   };
 }
 function addDay(ids) {
-  const body = openModal(`<div class="chooser-head"><div><span class="eyebrow">Add this day to the plan</span><h2 id="spModalTitle">Which day should it replace?</h2></div></div><p class="muted">Locked meals on that day are kept.</p>${[0, 1].map(w => `<h3 class="sp-cat">Week ${w + 1}</h3><div class="sp-daygrid">${DAY_NAMES.map((n, d) => `<button type="button" data-sp-day="${w * 7 + d}"><b>${n}</b><small>Day ${w * 7 + d + 1}</small></button>`).join('')}</div>`).join('')}`);
+  if (needPlan()) return;
+  const body = openModal(`<div class="chooser-head"><div><span class="eyebrow">Add this day to the plan</span><h2 id="spModalTitle">Which day should it replace?</h2></div></div><p class="muted">Locked meals on that day are kept.</p>${weekGroups().map((g, w) => `${nWeeks() > 1 ? `<h3 class="sp-cat">Week ${w + 1}</h3>` : ''}<div class="sp-daygrid">${g.map(di => `<button type="button" data-sp-day="${di}"><b>${dayLabel(di)}</b><small>Day ${di + 1}</small></button>`).join('')}</div>`).join('')}`);
   body.onclick = e => {
     const d = e.target.closest('[data-sp-day]'); if (!d) return;
     const di = Number(d.dataset.spDay), next = clonePlan();
@@ -475,7 +530,8 @@ function injectPlanner() {
     else if (t.dataset.spRemove) { const [d, s] = split(t.dataset.spRemove), next = clonePlan(), title = rmap[next.days[d][s].id].title; next.days[d][s] = null; commitPlan(next, `Removed ${title}`); }
     else if (t.id === 'spEditHouse') dbg.nav('profile');
     else if (t.id === 'spShuffle') shuffle();
-    else if (t.id === 'spReset') { if (confirm('Go back to the SabiPlate starter plan? Your swaps and locks will be replaced.')) commitPlan(defaultPlan(), 'Starter plan restored'); }
+    else if (t.id === 'spReset') { if (confirm('Start a fresh plan with new meals? Your swaps and locks will be replaced.')) commitPlan(makePlan(planLen(), plan.start), 'Fresh plan made'); }
+    else if (t.id === 'spPlanSettings') openSetup(true);
     else if (t.id === 'spUndo' && undoPlan) { const prev = JSON.parse(undoPlan); commitPlan(prev, 'Undone'); undoPlan = null; injectPlanner(); }
     else if (t.id === 'spGoShop') dbg.nav('shopping');
     else if (t.id === 'spGoPrep') dbg.nav('prep');
@@ -530,20 +586,21 @@ function planStart() {
   return s;
 }
 function todayIndex(d = new Date()) {
-  const st = new Date(planStart() + 'T00:00:00'); const t0 = new Date(d); t0.setHours(0, 0, 0, 0);
-  const days = Math.round((t0 - st) / 864e5); if (days >= 0) return ((days % 14) + 14) % 14;
-  const dow = (d.getDay() + 6) % 7;
-  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  t.setUTCDate(t.getUTCDate() + 3 - dow);
-  const y = new Date(Date.UTC(t.getUTCFullYear(), 0, 4));
-  const week = 1 + Math.round(((t - y) / 864e5 - 3 + ((y.getUTCDay() + 6) % 7)) / 7);
-  return (week % 2) * 7 + dow;
+  if (!plan) return -1;
+  const st = new Date(plan.start + 'T00:00:00'), t0 = new Date(d); t0.setHours(0, 0, 0, 0);
+  return Math.round((t0 - st) / 864e5);
 }
 function injectHome(force) {
   const v = document.querySelector('#view-home'); if (!v) return;
   if (v.querySelector('#spHome') && !force) return;
   v.querySelector('#spHome')?.remove();
-  const c = currentCosts(), di = todayIndex(), day = plan.days[di] || {};
+  if (!plan) {
+    const card = document.createElement('section'); card.id = 'spHome'; card.className = 'home-today ht-start';
+    card.innerHTML = `<div class="ht-head"><div><span class="eyebrow">Get started</span><h2>Plan your meals in a minute</h2><p>Tell us who's eating and how many days to plan for. We'll pick the meals, portion them for each person, and make your shopping list.</p></div></div><div class="ht-steps"><div><b>1</b><span>Who's eating</span></div><div><b>2</b><span>How many days</span></div><div><b>3</b><span>Your plan, shopping list and prep</span></div></div><button type="button" class="primary-btn" data-sp-setup>Create my meal plan</button>`;
+    const slot = v.querySelector('#homeToday'); if (slot) slot.replaceWith(card); else v.querySelector('.hero')?.after(card);
+    return;
+  }
+  const c = currentCosts(), raw = todayIndex(), len = planLen(), di = raw < 0 ? 0 : raw, done = raw >= len, day = plan.days[di] || {};
   const unnamed = members.some(m => /^Person \d+$/.test(m.name));
   const who = members.map(m => `${esc(m.name)} ${m.kcal.toLocaleString('en-GB')} kcal`).join(' · ') + (unnamed ? ` · <button type="button" class="ht-names" data-ht-go="profile">Add names</button>` : '');
   const meals = SLOTS.map(s => {
@@ -551,13 +608,19 @@ function injectHome(force) {
     if (!r) return `<button type="button" class="ht-meal ht-empty" data-ht-add="${s}"><span class="ht-img"></span><span class="ht-txt"><em>${s}</em><b>Add a meal</b></span></button>`;
     return `<button type="button" class="ht-meal" data-sp-view="${esc(e.id)}"><span class="ht-img"><img src="${esc(r.image)}" alt="" loading="lazy"></span><span class="ht-txt"><em>${s}</em><b>${esc(r.title)}</b></span></button>`;
   }).join('');
+  if (done) {
+    const card = document.createElement('section'); card.id = 'spHome'; card.className = 'home-today ht-start';
+    card.innerHTML = `<div class="ht-head"><div><span class="eyebrow">Plan finished</span><h2>Your ${len}-day plan has ended</h2><p>Make a new plan with fresh meals, or keep the same length and start today.</p></div></div><button type="button" class="primary-btn" data-sp-setup="change">Plan my next meals</button>`;
+    const slot = v.querySelector('#homeToday'); if (slot) slot.replaceWith(card); else v.querySelector('.hero')?.after(card);
+    return;
+  }
   const card = document.createElement('section'); card.id = 'spHome'; card.className = 'home-today';
-  card.innerHTML = `<div class="ht-head"><div><span class="eyebrow">Today · ${dayLabel(di)}</span><h2>Today's meals</h2><p>${who}</p></div><button type="button" class="ghost-btn" data-ht-go="planner">See full plan</button></div>
+  card.innerHTML = `<div class="ht-head"><div><span class="eyebrow">${raw < 0 ? `Your plan starts ${esc(dayLabel(0))}` : `Today · ${esc(dayLabel(di))} · Day ${di + 1} of ${len}`}</span><h2>${raw < 0 ? 'First day\'s meals' : 'Today\'s meals'}</h2><p>${who}</p></div><button type="button" class="ghost-btn" data-ht-go="planner">See full plan</button></div>
     <div class="ht-meals">${meals}</div>
     <div class="ht-links">
-      <button type="button" data-ht-go="planner"><b>14-day plan</b><span>${countMeals()} meals · portions for ${members.length === 1 ? 'you' : members.length + ' people'}</span></button>
-      <button type="button" data-ht-go="shopping"><b>Shopping list</b><span>About ${money(c.first)} for the first shop</span></button>
-      <button type="button" data-ht-go="prep"><b>Meal prep</b><span>Batch-cook plan for the fortnight</span></button>
+      <button type="button" data-ht-go="planner"><b>${len}-day plan</b><span>${countMeals()} meals · portions for ${members.length === 1 ? 'you' : members.length + ' people'}</span></button>
+      <button type="button" data-ht-go="shopping"><b>Shopping list</b><span>About ${money(c.first)}${len > 14 ? ' for the first shop' : ''}</span></button>
+      <button type="button" data-ht-go="prep"><b>Meal prep</b><span>What to cook, and when</span></button>
     </div>`;
   const slot = v.querySelector('#homeToday');
   if (slot) slot.replaceWith(card); else v.querySelector('.hero')?.after(card);
@@ -586,29 +649,59 @@ window.addEventListener('sabiplate:view-rendered', event => onView(event.detail?
 function welcomeRow(i, m) {
   return `<div class="welcome-person" data-wp="${i}"><label>Name<input data-w="name" value="${esc(m?.name && !/^Person \d+$/.test(m.name) ? m.name : '')}" placeholder="${i === 0 ? 'Your name' : 'Name'}" maxlength="24" autocomplete="off"></label><label>Goal<select data-w="goal">${['loss', 'maintain', 'gain'].map(k => `<option value="${k}" ${(m?.goal || 'maintain') === k ? 'selected' : ''}>${{ loss: 'Lose fat', maintain: 'Stay the same', gain: 'Build muscle' }[k]}</option>`).join('')}</select></label><label>Calories a day<input data-w="kcal" type="number" inputmode="numeric" min="${MIN_KCAL}" max="${MAX_KCAL}" step="50" value="${m?.kcal || GOAL_KCAL.maintain}"></label></div>`;
 }
-function openWelcome() {
+function startOptions() {
+  const t = new Date(); t.setHours(0, 0, 0, 0);
+  const tm = new Date(t); tm.setDate(t.getDate() + 1);
+  const mon = new Date(t); mon.setDate(t.getDate() + ((8 - t.getDay()) % 7 || 7));
+  return [['today', 'Today', isoDay(t)], ['tomorrow', 'Tomorrow', isoDay(tm)], ['monday', `Next Monday (${mon.getDate()} ${MONTHS[mon.getMonth()]})`, isoDay(mon)]];
+}
+function openSetup(planOnly = false) {
   let count = Math.min(6, Math.max(1, members.length));
-  const draw = body => {
-    const rows = body.querySelector('#wRows'), cur = [...rows.querySelectorAll('[data-wp]')].map(r => ({ name: r.querySelector('[data-w="name"]').value, goal: r.querySelector('[data-w="goal"]').value, kcal: Number(r.querySelector('[data-w="kcal"]').value) }));
-    rows.innerHTML = Array.from({ length: count }, (_, i) => welcomeRow(i, cur[i] || members[i])).join('');
-    body.querySelectorAll('[data-wcount]').forEach(b => { b.classList.toggle('active', Number(b.dataset.wcount) === count); b.setAttribute('aria-pressed', Number(b.dataset.wcount) === count); });
-    rows.querySelectorAll('[data-w="goal"]').forEach(sel => sel.onchange = () => { sel.closest('[data-wp]').querySelector('[data-w="kcal"]').value = GOAL_KCAL[sel.value]; });
+  let len = plan ? planLen() : 7;
+  let start = startOptions()[0][2];
+  const peopleHtml = `<div><b class="w-q">How many people are eating?</b><div class="welcome-count">${[1, 2, 3, 4, 5, 6].map(n => `<button type="button" data-wcount="${n}">${n}</button>`).join('')}</div></div><div id="wRows" style="display:grid;gap:8px"></div><p class="welcome-note">Not sure of your calories? Pick a goal and we'll fill in a typical number. You can change it any time in Household. This is a planning aid, not medical advice.</p>`;
+  const planHtml = `<div><b class="w-q">How many days do you want to plan?</b><div class="welcome-count w-len">${LENGTHS.map(n => `<button type="button" data-wlen="${n}">${n === 28 ? '4 weeks' : n === 21 ? '3 weeks' : n === 14 ? '2 weeks' : n === 7 ? '1 week' : n + ' days'}</button>`).join('')}</div><p class="welcome-note">Longer plans repeat a few dishes on purpose, so you can batch-cook and cook less.</p></div><div><b class="w-q">When do you want to start?</b><div class="welcome-count w-start">${startOptions().map(([k, label, iso]) => `<button type="button" data-wstart="${iso}">${esc(label)}</button>`).join('')}</div></div>`;
+  const body = openModal(`<div class="chooser-head"><div><span class="eyebrow">${planOnly ? 'Your meal plan' : 'Welcome to SabiPlate'}</span><h2 id="spModalTitle">${planOnly ? 'Change your plan' : 'Let\'s set up your plan'}</h2></div></div><div class="welcome-form">${planOnly ? '' : `<p class="muted" style="margin:0">Everyone eats the same meals. SabiPlate portions each plate to each person's daily calories, then builds one shopping list and prep plan.</p>${peopleHtml}`}${planHtml}${planOnly && plan ? '<p class="welcome-note">Meals you already have stay in place. Extra days get new meals; fewer days drops the last ones.</p>' : ''}<div class="welcome-actions"><button type="button" class="ghost-btn" id="wSkip">${planOnly ? 'Cancel' : 'Not now'}</button><button type="button" class="primary-btn" id="wSave">${planOnly && plan ? 'Update my plan' : 'Build my plan'}</button></div></div>`);
+  const draw = () => {
+    const rows = body.querySelector('#wRows');
+    if (rows) {
+      const cur = [...rows.querySelectorAll('[data-wp]')].map(r => ({ name: r.querySelector('[data-w="name"]').value, goal: r.querySelector('[data-w="goal"]').value, kcal: Number(r.querySelector('[data-w="kcal"]').value) }));
+      rows.innerHTML = Array.from({ length: count }, (_, i) => welcomeRow(i, cur[i] || members[i])).join('');
+      rows.querySelectorAll('[data-w="goal"]').forEach(sel => sel.onchange = () => { sel.closest('[data-wp]').querySelector('[data-w="kcal"]').value = GOAL_KCAL[sel.value]; });
+    }
+    body.querySelectorAll('[data-wcount]').forEach(b => { const on = Number(b.dataset.wcount) === count; b.classList.toggle('active', on); b.setAttribute('aria-pressed', on); });
+    body.querySelectorAll('[data-wlen]').forEach(b => { const on = Number(b.dataset.wlen) === len; b.classList.toggle('active', on); b.setAttribute('aria-pressed', on); });
+    body.querySelectorAll('[data-wstart]').forEach(b => { const on = b.dataset.wstart === start; b.classList.toggle('active', on); b.setAttribute('aria-pressed', on); });
   };
-  const body = openModal(`<div class="chooser-head"><div><span class="eyebrow">Welcome to SabiPlate</span><h2 id="spModalTitle">Who's eating?</h2></div></div><div class="welcome-form"><p class="muted" style="margin:0">Everyone eats the same meals. SabiPlate portions each plate to each person's daily calories, then builds one shopping list and prep plan.</p><div><b style="display:block;margin-bottom:6px;color:var(--green)">How many people?</b><div class="welcome-count">${[1, 2, 3, 4, 5, 6].map(n => `<button type="button" data-wcount="${n}">${n}</button>`).join('')}</div></div><div id="wRows" style="display:grid;gap:8px"></div><p class="welcome-note">Not sure of your calories? Pick a goal and we'll fill in a typical number; you can change it any time in Household. This is a planning aid, not medical advice.</p><div class="welcome-actions"><button type="button" class="ghost-btn" id="wSkip">Skip for now</button><button type="button" class="primary-btn" id="wSave">Build my plan</button></div></div>`);
-  draw(body);
-  setTimeout(() => body.querySelector('[data-w="name"]')?.focus(), 50);
-  body.querySelectorAll('[data-wcount]').forEach(b => b.onclick = () => { count = Number(b.dataset.wcount); draw(body); });
+  draw();
+  setTimeout(() => (body.querySelector('[data-w="name"]') || body.querySelector('[data-wlen].active'))?.focus(), 50);
+  body.querySelectorAll('[data-wcount]').forEach(b => b.onclick = () => { count = Number(b.dataset.wcount); draw(); });
+  body.querySelectorAll('[data-wlen]').forEach(b => b.onclick = () => { len = Number(b.dataset.wlen); draw(); });
+  body.querySelectorAll('[data-wstart]').forEach(b => b.onclick = () => { start = b.dataset.wstart; draw(); });
   const done = () => { store.set('sabiplate-welcomed', true); closeModal(); };
   body.querySelector('#wSkip').onclick = done;
   body.querySelector('#wSave').onclick = () => {
-    const list = [...body.querySelectorAll('[data-wp]')].map((r, i) => {
-      const goal = r.querySelector('[data-w="goal"]').value;
-      return { id: members[i]?.id || 'm' + Date.now() + i, name: r.querySelector('[data-w="name"]').value.trim() || (i === 0 ? 'Me' : 'Person ' + (i + 1)), goal, kcal: clamp(Number(r.querySelector('[data-w="kcal"]').value) || GOAL_KCAL[goal], MIN_KCAL, MAX_KCAL) };
-    });
-    saveMembers(list, 'Your plan is ready.');
+    if (!planOnly) {
+      const list = [...body.querySelectorAll('[data-wp]')].map((r, i) => {
+        const goal = r.querySelector('[data-w="goal"]').value;
+        return { id: members[i]?.id || 'm' + Date.now() + i, name: r.querySelector('[data-w="name"]').value.trim() || (i === 0 ? 'Me' : 'Person ' + (i + 1)), goal, kcal: clamp(Number(r.querySelector('[data-w="kcal"]').value) || GOAL_KCAL[goal], MIN_KCAL, MAX_KCAL) };
+      });
+      saveMembers(list);
+    }
+    let next;
+    if (planOnly && plan) {
+      const old = plan.days;
+      next = { v: 3, start, days: old.slice(0, len) };
+      if (len > old.length) { const extra = freshDays(len - old.length, old.length); next.days = next.days.concat(extra); varyDays(next.days, old.length); }
+    } else next = makePlan(len, start);
     done();
+    week = null; dayPick = null;
+    commitPlan(next, `Your ${len}-day plan is ready.`);
+    dbg.nav?.('planner');
   };
 }
+const openWelcome = () => openSetup(false);
+document.addEventListener('click', e => { const b = e.target.closest('[data-sp-setup]'); if (b) { e.preventDefault(); openSetup(b.dataset.spSetup === 'change' && !!plan); } });
 function maybeWelcome() {
   if (store.get('sabiplate-welcomed', false)) return;
   if (store.get('sabiplate-household-v1', null)) { store.set('sabiplate-welcomed', true); return; }
